@@ -56,17 +56,6 @@ export default function LandingView() {
             <span className="w-2 h-2 rounded-full bg-accent-primary"></span>
             杭湖嘉绍六镇图谱平台
           </div>
-          <nav className="hidden md:flex gap-10 text-text-secondary text-sm font-medium">
-            <a href="#" className="hover:text-text-primary transition-colors">项目 / Project</a>
-            <a href="#" className="hover:text-text-primary transition-colors">数据 / Data</a>
-            <a href="#" className="hover:text-text-primary transition-colors">关于 / About</a>
-          </nav>
-          <button 
-            onClick={() => setIsExploring(true)}
-            className="px-5 py-2 rounded-full text-sm font-medium bg-text-primary text-bg-primary hover:bg-gray-200 transition-colors"
-          >
-            平台导航
-          </button>
         </motion.header>
 
         {/* Center Content */}
@@ -103,7 +92,7 @@ export default function LandingView() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
                 className="w-full max-w-6xl mx-auto"
               >
                 <h2 className="text-3xl font-bold mb-10 text-white tracking-tight text-left">选择探索区域</h2>
@@ -113,7 +102,7 @@ export default function LandingView() {
                       key={town.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.1 * index }}
+                      transition={{ duration: 0.375, delay: 0.075 * index }}
                       onClick={() => navigate(`/${town.id}/info`)}
                       className="group cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 backdrop-blur-md rounded-2xl p-6 text-left transition-all duration-300 transform hover:-translate-y-2"
                     >
