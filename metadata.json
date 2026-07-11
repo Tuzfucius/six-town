@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Six Town",
+  "description": "杭湖嘉绍六镇新质生产力数字图谱 - Six Towns New Quality Productive Forces Digital Map",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
