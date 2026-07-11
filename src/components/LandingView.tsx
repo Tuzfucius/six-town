@@ -92,7 +92,7 @@ export default function LandingView() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
                 className="w-full max-w-6xl mx-auto"
               >
                 <h2 className="text-3xl font-bold mb-10 text-white tracking-tight text-left">选择探索区域</h2>
@@ -102,7 +102,7 @@ export default function LandingView() {
                       key={town.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.1 * index }}
+                      transition={{ duration: 0.375, delay: 0.075 * index }}
                       onClick={() => navigate(`/${town.id}/info`)}
                       className="group cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 backdrop-blur-md rounded-2xl p-6 text-left transition-all duration-300 transform hover:-translate-y-2"
                     >

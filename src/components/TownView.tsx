@@ -17,7 +17,7 @@ function DetailField({ label, children }: { label: string; children: ReactNode }
 }
 
 function EnterpriseDetail({ enterprise, onClose }: { enterprise: Enterprise; onClose: () => void }) {
-  return <aside className="fixed inset-0 z-50 bg-[#080b12]/95 p-5 backdrop-blur-xl md:static md:z-auto md:h-[calc(100vh-12rem)] md:rounded-lg md:border md:border-white/10 md:bg-[#101722]/90 md:p-6" aria-label="企业详情">
+  return <aside className="fixed inset-0 z-50 bg-[#080b12]/95 p-5 backdrop-blur-xl md:static md:z-auto md:h-[calc(100vh-12rem)] md:rounded-2xl md:border md:border-white/10 md:bg-[#101722]/90 md:p-6" aria-label="企业详情">
     <div className="mx-auto flex h-full max-w-2xl flex-col md:max-w-none">
       <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
         <div><p className="text-xs text-cyan-200/70">{enterprise.id} · {enterprise.enterpriseType}</p><h2 className="mt-2 text-xl font-semibold text-white">{enterprise.name}</h2></div>
@@ -77,7 +77,7 @@ export default function TownView() {
         <div className="flex shrink-0 flex-col items-end gap-3 text-right text-sm text-white/55"><div><strong className="block text-2xl text-white">{townEnterprises.length}</strong>已收录企业/项目主体</div><button type="button" onClick={() => navigate(`/${town.id}/map`)} className="rounded-md border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-200/20">查看企业位置</button></div>
       </header>
 
-      <section className="mt-6 border-y border-white/10 bg-[#101722]/80 py-4" aria-label="企业筛选">
+      <section className="mt-6 rounded-2xl border border-white/10 bg-[#101722]/80 py-4 shadow-xl shadow-black/10" aria-label="企业筛选">
         <div className="grid gap-3 px-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
           <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3"><Search className="h-4 w-4 text-white/45" /><input value={query} onChange={(event) => updateParams({ q: event.target.value })} className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/35" placeholder="搜索企业名称、别名或业务关键词" /></label>
           <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3"><SlidersHorizontal className="h-4 w-4 text-white/45" /><select value={industry} onChange={(event) => updateParams({ industry: event.target.value })} className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"><option value="">全部产业</option>{filters.map((item) => <option key={item} value={item} className="bg-slate-900">{item}</option>)}</select></label>
@@ -87,13 +87,13 @@ export default function TownView() {
 
       <div className="mt-4 flex items-center justify-between text-sm text-white/55"><span>显示 {visibleEnterprises.length} / {townEnterprises.length} 个条目</span><span>资料更新于 2026-07-11</span></div>
       <section className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
-        <div className="divide-y divide-white/10 border-y border-white/10 bg-[#101722]/70">
+        <div className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-[#101722]/70 shadow-xl shadow-black/10">
           {visibleEnterprises.length ? visibleEnterprises.map((enterprise) => <button type="button" key={enterprise.id} onClick={() => chooseEnterprise(enterprise.id)} className={`block w-full px-5 py-5 text-left transition hover:bg-white/[0.05] ${selected?.id === enterprise.id ? 'bg-cyan-300/[0.08]' : ''}`}>
             <div className="flex items-start justify-between gap-4"><div><p className="text-xs text-cyan-200/65">{enterprise.id} · {enterprise.enterpriseType}</p><h2 className="mt-1 text-base font-semibold text-white">{enterprise.name}</h2></div><span className={`shrink-0 rounded-full border px-2 py-1 text-xs ${statusStyles[enterprise.verificationStatus]}`}>{enterprise.verificationStatus}</span></div>
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/65">{enterprise.summary}</p><div className="mt-3 flex flex-wrap gap-2"><span className="rounded border border-white/10 px-2 py-0.5 text-xs text-white/60">{enterprise.primaryIndustry}</span>{enterprise.contactFlag && <span className="text-xs text-white/40">{enterprise.contactFlag}</span>}</div>
           </button>) : <div className="px-5 py-16 text-center text-sm text-white/55">没有符合条件的企业条目。请调整搜索词或筛选条件。</div>}
         </div>
-        {selected ? <EnterpriseDetail enterprise={selected} onClose={() => updateParams({ enterprise: '' })} /> : <div className="hidden min-h-[420px] place-items-center border border-dashed border-white/15 bg-[#101722]/50 p-8 text-center text-sm text-white/50 lg:grid"><div><MapPin className="mx-auto h-6 w-6 text-cyan-200/50" /><p className="mt-4">选择左侧企业条目查看已整理资料与来源。</p></div></div>}
+        {selected ? <EnterpriseDetail enterprise={selected} onClose={() => updateParams({ enterprise: '' })} /> : <div className="hidden min-h-[420px] place-items-center rounded-2xl border border-dashed border-white/15 bg-[#101722]/50 p-8 text-center text-sm text-white/50 lg:grid"><div><MapPin className="mx-auto h-6 w-6 text-cyan-200/50" /><p className="mt-4">选择左侧企业条目查看已整理资料与来源。</p></div></div>}
       </section>
     </div>
   </main>;
