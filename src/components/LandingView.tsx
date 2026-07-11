@@ -56,17 +56,6 @@ export default function LandingView() {
             <span className="w-2 h-2 rounded-full bg-accent-primary"></span>
             杭湖嘉绍六镇图谱平台
           </div>
-          <nav className="hidden md:flex gap-10 text-text-secondary text-sm font-medium">
-            <a href="#" className="hover:text-text-primary transition-colors">项目 / Project</a>
-            <a href="#" className="hover:text-text-primary transition-colors">数据 / Data</a>
-            <a href="#" className="hover:text-text-primary transition-colors">关于 / About</a>
-          </nav>
-          <button 
-            onClick={() => setIsExploring(true)}
-            className="px-5 py-2 rounded-full text-sm font-medium bg-text-primary text-bg-primary hover:bg-gray-200 transition-colors"
-          >
-            平台导航
-          </button>
         </motion.header>
 
         {/* Center Content */}
