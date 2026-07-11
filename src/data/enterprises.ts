@@ -8,7 +8,8 @@ const modules = import.meta.glob<string>('../content/enterprises/**/*.md', {
 });
 
 function splitFrontMatter(raw: string) {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  const normalized = raw.replace(/^\uFEFF/, '');
+  const match = normalized.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) throw new Error('企业资料缺少 Front Matter');
   return { attributes: parse(match[1]) as Record<string, unknown>, body: match[2].trim() };
 }
@@ -52,8 +53,15 @@ function createEnterprise(raw: string): Enterprise {
 }
 
 export const enterprises = Object.entries(modules)
-  .filter(([path]) => !path.endsWith('/README.md'))
-  .map(([, raw]) => createEnterprise(raw))
+  .flatMap(([path, raw]) => {
+    if (/[\\/]README\.md$/i.test(path)) return [];
+    try {
+      return [createEnterprise(raw)];
+    } catch (error) {
+      console.warn(`已跳过无法解析的企业资料：${path}`, error);
+      return [];
+    }
+  })
   .filter((enterprise) => enterprise.officialWebsite || enterprise.sources.length > 0)
   .sort((a, b) => a.id.localeCompare(b.id));
 
