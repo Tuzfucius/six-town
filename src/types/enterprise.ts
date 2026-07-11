@@ -1,5 +1,3 @@
-export type VerificationStatus = '已核验' | '部分核验' | '待核验';
-
 export interface EnterpriseSource {
   title: string;
   url: string;
@@ -21,7 +19,6 @@ export interface Enterprise {
   address: string;
   addressNature: string;
   townRelationship: string;
-  verificationStatus: VerificationStatus;
   officialWebsite: string;
   summary: string;
   productsAndTechnology: string[];

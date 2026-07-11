@@ -3,14 +3,8 @@ import { ChevronLeft, ExternalLink, MapPin, Search, SlidersHorizontal, X } from 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getEnterprisesByTown, getIndustryFilters } from '../data/enterprises';
 import { townsData } from '../data/towns';
-import type { Enterprise, VerificationStatus } from '../types/enterprise';
+import type { Enterprise } from '../types/enterprise';
 import TownBackground from './TownBackground';
-
-const statusStyles: Record<VerificationStatus, string> = {
-  已核验: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
-  部分核验: 'border-amber-300/40 bg-amber-300/10 text-amber-100',
-  待核验: 'border-slate-300/30 bg-white/5 text-white/70',
-};
 
 function DetailField({ label, children }: { label: string; children: ReactNode }) {
   return <section className="border-t border-white/10 py-4 first:border-t-0 first:pt-0"><h3 className="text-xs font-medium tracking-wide text-white/45">{label}</h3><div className="mt-2 text-sm leading-6 text-white/80">{children}</div></section>;
@@ -24,17 +18,15 @@ function EnterpriseDetail({ enterprise, onClose }: { enterprise: Enterprise; onC
         <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/10 text-white/70 hover:bg-white/10" aria-label="关闭企业详情"><X className="h-4 w-4" /></button>
       </div>
       <div className="mt-5 overflow-y-auto pr-1">
-        <div className={`mb-5 inline-flex rounded-full border px-2.5 py-1 text-xs ${statusStyles[enterprise.verificationStatus]}`}>{enterprise.verificationStatus}</div>
         <DetailField label="企业摘要">{enterprise.summary}</DetailField>
         <DetailField label="产业与产业链位置"><p>{enterprise.industryChainPosition}</p>{enterprise.secondaryIndustries.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{enterprise.secondaryIndustries.map((tag) => <span key={tag} className="rounded border border-white/15 px-2 py-0.5 text-xs text-white/65">{tag}</span>)}</div>}</DetailField>
         <DetailField label="地址与小镇关联"><p><span className="text-white/45">地址：</span>{enterprise.address}</p><p className="mt-2"><span className="text-white/45">地址性质：</span>{enterprise.addressNature}</p><p className="mt-2"><span className="text-white/45">关联说明：</span>{enterprise.townRelationship}</p></DetailField>
         <DetailField label="代表产品、技术或成果"><ul className="space-y-2">{enterprise.productsAndTechnology.map((item) => <li key={item}>{item}</li>)}</ul></DetailField>
         <DetailField label="对小镇产业生态的作用">{enterprise.industryRole}</DetailField>
-        {enterprise.researchNotes && <DetailField label="待核验事项与研究说明">{enterprise.researchNotes}</DetailField>}
         <DetailField label="资料来源">
           <div className="space-y-3">
             {enterprise.officialWebsite && <a className="flex items-center gap-2 text-cyan-200 hover:text-cyan-100" href={enterprise.officialWebsite} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />企业官网</a>}
-            {enterprise.sources.length > 0 ? enterprise.sources.map((source) => <a key={source.url} className="block text-cyan-200 hover:text-cyan-100" href={source.url} target="_blank" rel="noreferrer">{source.title}<span className="ml-2 text-xs text-white/40">{source.type} · {source.accessedAt}</span></a>) : <p className="text-white/45">来源补充中；请以条目中的待核验说明为准。</p>}
+            {enterprise.sources.map((source) => <a key={source.url} className="block text-cyan-200 hover:text-cyan-100" href={source.url} target="_blank" rel="noreferrer">{source.title}<span className="ml-2 text-xs text-white/40">{source.type} · {source.accessedAt}</span></a>)}
           </div>
         </DetailField>
       </div>
@@ -89,7 +81,7 @@ export default function TownView() {
       <section className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
         <div className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-[#101722]/70 shadow-xl shadow-black/10">
           {visibleEnterprises.length ? visibleEnterprises.map((enterprise) => <button type="button" key={enterprise.id} onClick={() => chooseEnterprise(enterprise.id)} className={`block w-full px-5 py-5 text-left transition hover:bg-white/[0.05] ${selected?.id === enterprise.id ? 'bg-cyan-300/[0.08]' : ''}`}>
-            <div className="flex items-start justify-between gap-4"><div><p className="text-xs text-cyan-200/65">{enterprise.id} · {enterprise.enterpriseType}</p><h2 className="mt-1 text-base font-semibold text-white">{enterprise.name}</h2></div><span className={`shrink-0 rounded-full border px-2 py-1 text-xs ${statusStyles[enterprise.verificationStatus]}`}>{enterprise.verificationStatus}</span></div>
+            <div><p className="text-xs text-cyan-200/65">{enterprise.id} · {enterprise.enterpriseType}</p><h2 className="mt-1 text-base font-semibold text-white">{enterprise.name}</h2></div>
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/65">{enterprise.summary}</p><div className="mt-3 flex flex-wrap gap-2"><span className="rounded border border-white/10 px-2 py-0.5 text-xs text-white/60">{enterprise.primaryIndustry}</span>{enterprise.contactFlag && <span className="text-xs text-white/40">{enterprise.contactFlag}</span>}</div>
           </button>) : <div className="px-5 py-16 text-center text-sm text-white/55">没有符合条件的企业条目。请调整搜索词或筛选条件。</div>}
         </div>

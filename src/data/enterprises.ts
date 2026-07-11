@@ -1,13 +1,11 @@
 import { parse } from 'yaml';
-import type { Enterprise, EnterpriseSource, VerificationStatus } from '../types/enterprise';
+import type { Enterprise, EnterpriseSource } from '../types/enterprise';
 
 const modules = import.meta.glob<string>('../content/enterprises/**/*.md', {
   eager: true,
   query: '?raw',
   import: 'default',
 });
-
-const validStatuses: VerificationStatus[] = ['已核验', '部分核验', '待核验'];
 
 function splitFrontMatter(raw: string) {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
@@ -16,7 +14,14 @@ function splitFrontMatter(raw: string) {
 }
 
 function toStringList(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').map(toPublicText) : [];
+}
+
+function toPublicText(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('待核验', '公开资料未提供')
+    .replaceAll('部分核验', '')
+    .replaceAll('已核验', '');
 }
 
 function toSources(value: unknown): EnterpriseSource[] {
@@ -28,8 +33,6 @@ function toSources(value: unknown): EnterpriseSource[] {
 
 function createEnterprise(raw: string): Enterprise {
   const { attributes, body } = splitFrontMatter(raw);
-  const status = String(attributes.verificationStatus ?? '待核验') as VerificationStatus;
-  if (!validStatuses.includes(status)) throw new Error(`无效核验状态：${status}`);
   const required = ['id', 'name', 'townId', 'townName', 'summary'];
   for (const key of required) {
     if (!String(attributes[key] ?? '').trim()) throw new Error(`企业资料缺少字段：${key}`);
@@ -37,20 +40,21 @@ function createEnterprise(raw: string): Enterprise {
   return {
     id: String(attributes.id), name: String(attributes.name), aliases: toStringList(attributes.aliases),
     townId: String(attributes.townId), townName: String(attributes.townName),
-    enterpriseType: String(attributes.enterpriseType ?? '待核验'), contactFlag: String(attributes.contactFlag ?? ''),
-    primaryIndustry: String(attributes.primaryIndustry ?? '待核验'), secondaryIndustries: toStringList(attributes.secondaryIndustries),
-    industryChainPosition: String(attributes.industryChainPosition ?? '待核验'), address: String(attributes.address ?? '待核验'),
-    addressNature: String(attributes.addressNature ?? '待核验'), townRelationship: String(attributes.townRelationship ?? '待核验'),
-    verificationStatus: status, officialWebsite: String(attributes.officialWebsite ?? ''),
-    summary: String(attributes.summary), productsAndTechnology: toStringList(attributes.productsAndTechnology),
-    industryRole: String(attributes.industryRole ?? '待补充'), sources: toSources(attributes.sources),
-    researchNotes: String(attributes.researchNotes ?? ''), updatedAt: String(attributes.updatedAt ?? ''), body,
+    enterpriseType: toPublicText(attributes.enterpriseType || '企业资料'), contactFlag: toPublicText(attributes.contactFlag),
+    primaryIndustry: toPublicText(attributes.primaryIndustry || '产业资料'), secondaryIndustries: toStringList(attributes.secondaryIndustries),
+    industryChainPosition: toPublicText(attributes.industryChainPosition || '公开资料未提供'), address: toPublicText(attributes.address || '公开资料未提供'),
+    addressNature: toPublicText(attributes.addressNature || '公开资料未提供'), townRelationship: toPublicText(attributes.townRelationship || '公开资料未提供'),
+    officialWebsite: String(attributes.officialWebsite ?? ''),
+    summary: toPublicText(attributes.summary), productsAndTechnology: toStringList(attributes.productsAndTechnology),
+    industryRole: toPublicText(attributes.industryRole || '公开资料未提供'), sources: toSources(attributes.sources),
+    researchNotes: toPublicText(attributes.researchNotes), updatedAt: String(attributes.updatedAt ?? ''), body,
   };
 }
 
 export const enterprises = Object.entries(modules)
   .filter(([path]) => !path.endsWith('/README.md'))
   .map(([, raw]) => createEnterprise(raw))
+  .filter((enterprise) => enterprise.officialWebsite || enterprise.sources.length > 0)
   .sort((a, b) => a.id.localeCompare(b.id));
 
 export function getEnterprisesByTown(townId: string) {
