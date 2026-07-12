@@ -27,4 +27,12 @@ export interface Enterprise {
   researchNotes: string;
   updatedAt: string;
   body: string;
+  longitude?: number;
+  latitude?: number;
+  coordinatePrecision?: string;
+  coordinateVerificationStatus?: string;
+  addressVerificationStatus?: string;
+  verificationNote?: string;
+  isCrossTownEnterprise?: boolean;
+  isHistoricalDuplicate?: boolean;
 }

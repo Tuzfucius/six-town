@@ -1,5 +1,6 @@
 import { parse } from 'yaml';
 import type { Enterprise, EnterpriseSource } from '../types/enterprise';
+import { enterpriseVerification, excludedEnterpriseIds } from './enterpriseVerification';
 
 const modules = import.meta.glob<string>('../content/enterprises/**/*.md', {
   eager: true,
@@ -38,7 +39,7 @@ function createEnterprise(raw: string): Enterprise {
   for (const key of required) {
     if (!String(attributes[key] ?? '').trim()) throw new Error(`企业资料缺少字段：${key}`);
   }
-  return {
+  const baseEnterprise = {
     id: String(attributes.id), name: String(attributes.name), aliases: toStringList(attributes.aliases),
     townId: String(attributes.townId), townName: String(attributes.townName),
     enterpriseType: toPublicText(attributes.enterpriseType || '企业资料'), contactFlag: toPublicText(attributes.contactFlag),
@@ -50,6 +51,8 @@ function createEnterprise(raw: string): Enterprise {
     industryRole: toPublicText(attributes.industryRole || '公开资料未提供'), sources: toSources(attributes.sources),
     researchNotes: toPublicText(attributes.researchNotes), updatedAt: String(attributes.updatedAt ?? ''), body,
   };
+  const verification = enterpriseVerification[baseEnterprise.id];
+  return verification ? { ...baseEnterprise, ...verification } : baseEnterprise;
 }
 
 export const enterprises = Object.entries(modules)
@@ -62,6 +65,7 @@ export const enterprises = Object.entries(modules)
       return [];
     }
   })
+  .filter((enterprise) => !excludedEnterpriseIds.has(enterprise.id))
   .filter((enterprise) => enterprise.officialWebsite || enterprise.sources.length > 0)
   .sort((a, b) => a.id.localeCompare(b.id));
 
@@ -71,4 +75,12 @@ export function getEnterprisesByTown(townId: string) {
 
 export function getIndustryFilters(enterpriseList: Enterprise[]) {
   return [...new Set(enterpriseList.map((enterprise) => enterprise.primaryIndustry).filter(Boolean))].sort();
+}
+
+export function getCountedEnterprisesByTown(townId: string) {
+  return getEnterprisesByTown(townId).filter((enterprise) => !enterprise.isHistoricalDuplicate);
+}
+
+export function getMapEnterprisesByTown(townId: string) {
+  return getEnterprisesByTown(townId).filter((enterprise) => !enterprise.isHistoricalDuplicate && enterprise.longitude !== undefined && enterprise.latitude !== undefined);
 }

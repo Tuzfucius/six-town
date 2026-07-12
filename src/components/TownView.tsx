@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { ChevronLeft, ExternalLink, Search, SlidersHorizontal } from 'lucide-react';
+import { BadgeCheck, ChevronLeft, ExternalLink, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getEnterprisesByTown, getIndustryFilters } from '../data/enterprises';
+import { getCountedEnterprisesByTown, getEnterprisesByTown, getIndustryFilters } from '../data/enterprises';
 import { townsData } from '../data/towns';
 import type { Enterprise } from '../types/enterprise';
 import TownBackground from './TownBackground';
@@ -41,6 +41,8 @@ function EnterpriseCard({ enterprise }: { enterprise: Enterprise, key?: string }
             <span className="text-xs text-white/40">
               {enterprise.id} · {enterprise.enterpriseType}
             </span>
+            {enterprise.isCrossTownEnterprise && <span className="text-xs text-amber-200">跨界应用企业</span>}
+            {enterprise.isHistoricalDuplicate && <span className="text-xs text-white/55">历史项目</span>}
           </div>
           
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 tracking-tight">{enterprise.name}</h2>
@@ -78,7 +80,7 @@ function EnterpriseCard({ enterprise }: { enterprise: Enterprise, key?: string }
             <div className="space-y-6">
               <div>
                 <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                  <span className="w-1 h-1 rounded-full bg-[#A4F4FD]" /> 企业地址
+                  <MapPin className="h-3.5 w-3.5 text-[#A4F4FD]" /> 企业地址
                 </h3>
                 <p className="text-sm text-white/80">{enterprise.address}</p>
                 <p className="text-xs text-white/50 mt-2">{enterprise.addressNature}</p>
@@ -86,9 +88,10 @@ function EnterpriseCard({ enterprise }: { enterprise: Enterprise, key?: string }
 
               <div>
                 <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                  <span className="w-1 h-1 rounded-full bg-[#A4F4FD]" /> 小镇协同
+                  <BadgeCheck className="h-3.5 w-3.5 text-[#A4F4FD]" /> 小镇归属与核验
                 </h3>
                 <p className="text-sm text-white/80 leading-relaxed">{enterprise.townRelationship}</p>
+                {enterprise.verificationNote && <p className="mt-2 text-xs leading-5 text-white/55">{enterprise.verificationNote}</p>}
               </div>
               
               {enterprise.secondaryIndustries.length > 0 && (
@@ -109,11 +112,12 @@ function EnterpriseCard({ enterprise }: { enterprise: Enterprise, key?: string }
           </div>
         </div>
 
-        {enterprise.officialWebsite && (
-          <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
-            <a href={enterprise.officialWebsite} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-medium text-[#A4F4FD] hover:text-white transition-colors bg-[#A4F4FD]/10 hover:bg-[#A4F4FD]/20 px-4 py-2 rounded-lg">
+        {(enterprise.officialWebsite || enterprise.sources.length > 0) && (
+          <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+            {enterprise.sources[0] ? <a href={enterprise.sources[0].url} target="_blank" rel="noreferrer" className="text-xs text-white/55 hover:text-white">核验来源 <ExternalLink className="ml-1 inline h-3 w-3" /></a> : <span />}
+            {enterprise.officialWebsite && <a href={enterprise.officialWebsite} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-medium text-[#A4F4FD] hover:text-white transition-colors bg-[#A4F4FD]/10 hover:bg-[#A4F4FD]/20 px-4 py-2 rounded-lg">
               访问官网 <ExternalLink className="w-4 h-4" />
-            </a>
+            </a>}
           </div>
         )}
       </div>
@@ -127,6 +131,7 @@ export default function TownView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const town = townId ? townsData[townId] : undefined;
   const townEnterprises = useMemo(() => getEnterprisesByTown(townId ?? ''), [townId]);
+  const countedEnterprises = useMemo(() => getCountedEnterprisesByTown(townId ?? ''), [townId]);
   
   const query = searchParams.get('q') ?? '';
   const industry = searchParams.get('industry') ?? '';
@@ -163,7 +168,7 @@ export default function TownView() {
           </div>
         </div>
         <div className="flex shrink-0 flex-col md:items-end gap-3 text-left md:text-right text-sm text-white/55">
-          <div><strong className="block text-2xl text-white">{townEnterprises.length}</strong> 已收录企业</div>
+          <div><strong className="block text-2xl text-white">{countedEnterprises.length}</strong> 已收录企业</div>
           <button type="button" onClick={() => navigate(`/${town.id}/map`)} className="rounded-md border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-200/20 transition-colors">查看企业位置</button>
         </div>
       </header>
