@@ -125,7 +125,7 @@ export default function TownMapView() {
         </div>
         
         <div 
-          className="relative w-full overflow-hidden h-[288px] shrink-0"
+          className="relative w-full overflow-hidden h-[384px] shrink-0"
           style={{
             WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
             maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)'
