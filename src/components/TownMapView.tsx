@@ -148,7 +148,7 @@ export default function TownMapView() {
               maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)'
             }}
           >
-            <div 
+            <div
               ref={scrollContainerRef}
               className="absolute inset-0 overflow-y-auto snap-y snap-mandatory scroll-smooth pr-8"
               style={{ scrollbarWidth: 'none', perspective: '1000px' }}
