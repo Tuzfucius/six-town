@@ -52,8 +52,9 @@ function RollerItem({
       ref={itemRef}
       type="button"
       onClick={onSelect}
+      data-enterprise-id={enterprise.id}
       style={{ rotateX, scale, opacity, y, transformStyle: 'preserve-3d' }}
-      className={`relative flex flex-col justify-center w-full h-[96px] border-b border-white/5 px-6 py-0 text-left transition-colors snap-start ${selected ? 'bg-[#A4F4FD]/10' : 'hover:bg-white/[0.04]'}`}
+      className={`relative flex flex-col justify-center w-full h-[96px] border-b border-white/5 px-6 py-0 text-left transition-colors snap-center ${selected ? 'bg-[#A4F4FD]/10' : 'hover:bg-white/[0.04]'}`}
     >
       <div className={`absolute left-0 top-1/2 h-[1px] w-2 -translate-y-1/2 transition-all duration-300 ${selected ? 'w-4 bg-[#A4F4FD] shadow-[0_0_8px_rgba(164,244,253,0.8)]' : 'bg-white/20'}`} />
       
@@ -85,8 +86,8 @@ export default function TownMapView() {
   const town = townId ? townsData[townId] : undefined;
   const mapRef = useRef<MapRef>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [selected, setSelected] = useState<Enterprise | null>(null);
   const enterprises = getEnterprisesByTown(townId ?? '');
+  const [selected, setSelected] = useState<Enterprise | null>(() => enterprises[0] ?? null);
   const mapEnterprises = getMapEnterprisesByTown(townId ?? '');
   const usesRollerList = enterprises.length >= 3;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +96,20 @@ export default function TownMapView() {
     if (!town || !mapRef.current) return;
     mapRef.current.flyTo({ center: [town.mapCenter.longitude, town.mapCenter.latitude], zoom: 14, pitch: 58, bearing: -26, duration: 900 });
   }, [town]);
+  useEffect(() => {
+    setSelected(enterprises[0] ?? null);
+  }, [townId]);
+  useEffect(() => {
+    if (!selected || !usesRollerList) return;
+    const frame = requestAnimationFrame(() => {
+      scrollContainerRef.current?.querySelector<HTMLButtonElement>(`[data-enterprise-id="${selected.id}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selected?.id, usesRollerList]);
+  useEffect(() => {
+    if (selected) chooseEnterprise(selected);
+  }, [selected?.id]);
   if (!town) return <main className="grid min-h-screen place-items-center bg-[#0c0c0c] text-white">未找到对应小镇。</main>;
 
   const chooseEnterprise = (enterprise: Enterprise) => {
@@ -148,11 +163,12 @@ export default function TownMapView() {
               maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)'
             }}
           >
-            <div
+            <div 
               ref={scrollContainerRef}
               className="absolute inset-0 overflow-y-auto snap-y snap-mandatory scroll-smooth pr-8"
               style={{ scrollbarWidth: 'none', perspective: '1000px' }}
             >
+              <div className="h-[144px] shrink-0" aria-hidden="true" />
               {enterprises.map((enterprise) => (
                 <RollerItem
                   key={enterprise.id}
@@ -162,7 +178,7 @@ export default function TownMapView() {
                   containerRef={scrollContainerRef}
                 />
               ))}
-              <div className="h-[66%] snap-end" />
+              <div className="h-[144px] shrink-0" aria-hidden="true" />
             </div>
             <div className="pointer-events-none absolute bottom-0 left-2 top-0 w-1 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSIyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIwIiB5PSI5IiB3aWR0aD0iNCIgaGVpZ2h0PSIyIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48L3N2Zz4=')] opacity-50" />
           </div>
