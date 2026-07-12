@@ -64,6 +64,21 @@ function RollerItem({
   );
 }
 
+function FlatEnterpriseItem({ enterprise, selected, onSelect }: { enterprise: Enterprise; selected: boolean; onSelect: () => void; key?: string | number }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative flex min-h-[96px] w-full flex-col justify-center border-b border-white/5 px-6 py-4 text-left transition-colors ${selected ? 'bg-[#A4F4FD]/10' : 'hover:bg-white/[0.04]'}`}
+    >
+      <div className={`absolute left-0 top-1/2 h-[1px] -translate-y-1/2 transition-all duration-300 ${selected ? 'w-4 bg-[#A4F4FD] shadow-[0_0_8px_rgba(164,244,253,0.8)]' : 'w-2 bg-white/20'}`} />
+      <p className="text-[10px] tracking-wider text-[#A4F4FD]/60 font-mono uppercase truncate">{enterprise.id} · {enterprise.primaryIndustry}</p>
+      <h2 className={`mt-1 text-sm font-semibold transition-colors ${selected ? 'text-[#A4F4FD]' : 'text-white/90'}`}>{enterprise.name}</h2>
+      <p className="mt-1 line-clamp-2 text-xs leading-4 text-white/50">{enterprise.summary}</p>
+    </button>
+  );
+}
+
 export default function TownMapView() {
   const navigate = useNavigate();
   const { townId } = useParams<{ townId: string }>();
@@ -73,6 +88,7 @@ export default function TownMapView() {
   const [selected, setSelected] = useState<Enterprise | null>(null);
   const enterprises = getEnterprisesByTown(townId ?? '');
   const mapEnterprises = getMapEnterprisesByTown(townId ?? '');
+  const usesRollerList = enterprises.length >= 3;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,33 +140,39 @@ export default function TownMapView() {
           <p className="mt-1.5 text-sm text-white/75">{enterprises.length} 个已收录企业</p>
         </div>
         
-        <div 
-          className="relative w-full overflow-hidden h-[384px] shrink-0"
-          style={{
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)'
-          }}
-        >
-          <div 
-            ref={scrollContainerRef}
-            className="absolute inset-0 overflow-y-auto snap-y snap-mandatory scroll-smooth pr-8"
-            style={{ scrollbarWidth: 'none', perspective: '1000px' }}
+        {usesRollerList ? (
+          <div
+            className="relative h-[384px] w-full shrink-0 overflow-hidden"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)'
+            }}
           >
-            {enterprises.map((enterprise) => (
-              <RollerItem 
-                key={enterprise.id} 
-                enterprise={enterprise} 
-                selected={selected?.id === enterprise.id} 
-                onSelect={() => chooseEnterprise(enterprise)} 
-                containerRef={scrollContainerRef}
-              />
-            ))}
-            <div className="h-[66%] snap-end" />
+            <div 
+              ref={scrollContainerRef}
+              className="absolute inset-0 overflow-y-auto snap-y snap-mandatory scroll-smooth pr-8"
+              style={{ scrollbarWidth: 'none', perspective: '1000px' }}
+            >
+              {enterprises.map((enterprise) => (
+                <RollerItem
+                  key={enterprise.id}
+                  enterprise={enterprise}
+                  selected={selected?.id === enterprise.id}
+                  onSelect={() => chooseEnterprise(enterprise)}
+                  containerRef={scrollContainerRef}
+                />
+              ))}
+              <div className="h-[66%] snap-end" />
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-2 top-0 w-1 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSIyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIwIiB5PSI5IiB3aWR0aD0iNCIgaGVpZ2h0PSIyIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48L3N2Zz4=')] opacity-50" />
           </div>
-          
-          {/* Edge Rulers */}
-          <div className="pointer-events-none absolute left-2 top-0 bottom-0 w-1 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSIyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIwIiB5PSI5IiB3aWR0aD0iNCIgaGVpZ2h0PSIyIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48L3N2Zz4=')] opacity-50" />
-        </div>
+        ) : (
+          <div className="w-full shrink-0 pr-8">
+            {enterprises.map((enterprise) => (
+              <FlatEnterpriseItem key={enterprise.id} enterprise={enterprise} selected={selected?.id === enterprise.id} onSelect={() => chooseEnterprise(enterprise)} />
+            ))}
+          </div>
+        )}
       </div>
     </aside>
 
