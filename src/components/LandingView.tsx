@@ -77,7 +77,7 @@ export default function LandingView() {
                 
                 <div className="mt-12 mb-12 flex flex-col items-center">
                   <button 
-                    onClick={() => setIsExploring(true)}
+                    onClick={() => navigate('/metro')}
                     className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md border border-white/30 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 px-8 py-4 font-semibold text-white text-base flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(164,244,253,0.2)]"
                   >
                     <span className="relative z-10 tracking-widest group-hover:text-[#A4F4FD] transition-colors">开始探索</span>
