@@ -14,7 +14,7 @@ export interface Town {
 export const townsData: Record<string, Town> = {
   dream: {
     id: 'dream', name: '梦想小镇', subtitle: '创业孵化与应用创新', city: '杭州 · 余杭', color: '#67e8f9', mapCenter: { longitude: 119.988, latitude: 30.292 },
-    description: '以青年创新创业、科技项目孵化和应用创新为主要特色，关注智能硬件、数字平台与创业服务。', metroCity: '杭州', industryTags: ['创业孵化', '数字平台', '智能硬件'], representativeEnterpriseIds: ['DM-001', 'DM-002'],
+    description: '以青年创新创业、科技项目孵化和应用创新为主要特色，关注智能硬件、数字平台与创业服务。', metroCity: '杭州', industryTags: ['创业孵化', '数字平台', '智能硬件'], representativeEnterpriseIds: ['MX-001', 'MX-002'],
   },
   ai: {
     id: 'ai', name: '人工智能小镇/未来科技城', subtitle: '前沿智能技术与成果转化', city: '杭州 · 余杭', color: '#a5b4fc', mapCenter: { longitude: 119.967, latitude: 30.264 },
