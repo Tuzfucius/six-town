@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import Map, { Marker, NavigationControl, type MapRef } from 'react-map-gl/maplibre';
-import { ChevronLeft, ChevronRight, GripVertical, Layers, MapPin, Rotate3D, Satellite } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical, Layers, MapPin, Rotate3D } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { getEnterprisesByTown, getMapEnterprisesByTown } from '../data/enterprises';
@@ -142,7 +142,7 @@ export default function TownMapView() {
       </header>
       <div className="absolute right-4 top-20 z-20 flex items-center gap-1 rounded-md border border-white/15 bg-[#0b111c]/90 p-1 shadow-xl backdrop-blur sm:right-6 sm:top-24" aria-label="底图切换">
         <Layers className="ml-2 h-4 w-4 text-cyan-100/70" aria-hidden="true" />
-        {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => setBaseMap(item.id)} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.id === 'satellite' ? <Satellite className="h-4 w-4" /> : item.label}</button>)}
+        {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => setBaseMap(item.id)} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.label}</button>)}
       </div>
 
     <aside className={`absolute bottom-4 left-0 top-20 z-20 flex transition-[width] duration-300 ease-in-out sm:bottom-6 sm:top-24 ${collapsed ? 'w-12 sm:left-0' : 'w-[min(24rem,calc(100vw))] sm:left-0'}`} aria-label="企业概要列表">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre';
-import { ArrowLeft, ChevronRight, Layers, MapPin, Satellite } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Layers, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { baseMaps, defaultMetroBaseMap, type BaseMapId } from '../data/mapStyles';
 import { enterprises } from '../data/enterprises';
@@ -56,7 +56,7 @@ export default function MetroOverviewView() {
         </div>
         <div className="flex items-center gap-1 rounded-md border border-white/15 bg-[#07111c]/90 p-1 backdrop-blur" aria-label="底图切换">
           <Layers className="ml-2 h-4 w-4 text-cyan-100/70" aria-hidden="true" />
-          {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => setBaseMap(item.id)} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.id === 'satellite' ? <Satellite className="h-4 w-4" /> : item.label}</button>)}
+          {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => setBaseMap(item.id)} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.label}</button>)}
         </div>
       </header>
 
