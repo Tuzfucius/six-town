@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import Map, { Marker, NavigationControl, type MapRef } from 'react-map-gl/maplibre';
-import { ChevronLeft, ChevronRight, GripVertical, MapPin, Rotate3D } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical, Layers, MapPin, Rotate3D, Satellite } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { getEnterprisesByTown, getMapEnterprisesByTown } from '../data/enterprises';
 import { townsData } from '../data/towns';
 import type { Enterprise } from '../types/enterprise';
-
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+import { baseMaps, defaultBaseMap, type BaseMapId } from '../data/mapStyles';
 
 function enableBuildings(map: maplibregl.Map) {
-  if (map.getLayer('enterprise-3d-buildings')) return;
+  if (map.getLayer('enterprise-3d-buildings') || !map.getSource('carto')) return;
   map.addLayer({
     id: 'enterprise-3d-buildings', type: 'fill-extrusion', source: 'carto', 'source-layer': 'building',
     minzoom: 13,
@@ -85,6 +84,7 @@ export default function TownMapView() {
   const { townId } = useParams<{ townId: string }>();
   const town = townId ? townsData[townId] : undefined;
   const mapRef = useRef<MapRef>(null);
+  const [baseMap, setBaseMap] = useState<BaseMapId>(defaultBaseMap);
   const [collapsed, setCollapsed] = useState(false);
   const enterprises = getEnterprisesByTown(townId ?? '');
   const [selected, setSelected] = useState<Enterprise | null>(() => enterprises[0] ?? null);
@@ -120,28 +120,30 @@ export default function TownMapView() {
     mapRef.current?.flyTo({ center, zoom: 16, pitch: 62, bearing: -38, duration: 850 });
   };
 
+  const mapStyle = baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style;
+
   return <main className="relative h-screen overflow-hidden bg-[#080b12] text-white">
-    <Map ref={mapRef} initialViewState={{ ...town.mapCenter, zoom: 14, pitch: 58, bearing: -26 }} mapStyle={MAP_STYLE} dragRotate touchPitch interactive onLoad={(event) => enableBuildings(event.target)} className="absolute inset-0" attributionControl={false}>
+    <Map ref={mapRef} initialViewState={{ ...town.mapCenter, zoom: 14, pitch: 58, bearing: -26 }} mapStyle={mapStyle} dragRotate touchPitch interactive onLoad={(event) => enableBuildings(event.target)} onStyleLoad={(event) => enableBuildings(event.target)} className="absolute inset-0" attributionControl={false}>
       {mapEnterprises.map((enterprise) => (
-        <Marker key={enterprise.id} longitude={enterprise.longitude!} latitude={enterprise.latitude!} anchor="bottom">
-          <button
-            type="button"
-            onClick={() => chooseEnterprise(enterprise)}
-            aria-label={`定位 ${enterprise.name}`}
-            className={`grid h-9 w-9 place-items-center rounded-full border shadow-lg transition-transform hover:scale-110 ${enterprise.isCrossTownEnterprise ? 'border-amber-200 bg-amber-400/90 text-slate-950' : selected?.id === enterprise.id ? 'border-white bg-cyan-200 text-slate-950 scale-110' : 'border-cyan-100/80 bg-[#0b111c]/90 text-cyan-100'}`}
-          >
-            <MapPin className="h-4 w-4" aria-hidden="true" />
-          </button>
+        <Marker key={enterprise.id} longitude={enterprise.longitude!} latitude={enterprise.latitude!} anchor="bottom" onClick={(event) => { event.originalEvent.stopPropagation(); chooseEnterprise(enterprise); }}>
+          <div aria-label={`定位 ${enterprise.name}`} title={`查看 ${enterprise.name}`} className="group relative grid h-10 w-10 cursor-pointer place-items-center">
+            <span className={`absolute bottom-4 h-20 w-4 rounded-full blur-md transition-all group-hover:h-28 group-focus-visible:h-28 ${enterprise.isCrossTownEnterprise ? 'bg-amber-300/80' : selected?.id === enterprise.id ? 'bg-cyan-200/90' : 'bg-cyan-300/65'}`} />
+            <span className={`relative grid h-9 w-9 place-items-center rounded-full border shadow-lg transition-transform group-hover:scale-110 group-focus-visible:scale-110 ${enterprise.isCrossTownEnterprise ? 'border-amber-200 bg-amber-400/90 text-slate-950' : selected?.id === enterprise.id ? 'border-white bg-cyan-200 text-slate-950 scale-110' : 'border-cyan-100/80 bg-[#0b111c]/90 text-cyan-100'}`}><MapPin className="h-4 w-4" aria-hidden="true" /></span>
+          </div>
         </Marker>
       ))}
       <NavigationControl position="bottom-right" visualizePitch />
     </Map>
-    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#080b12]/55 via-transparent to-[#080b12]/45" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#080b12]/55 via-transparent to-[#080b12]/45" />
 
-    <header className="pointer-events-none absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-4 sm:left-6 sm:right-6 sm:top-6">
+      <header className="pointer-events-none absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-4 sm:left-6 sm:right-6 sm:top-6">
       <div className="pointer-events-auto flex items-start gap-3"><button type="button" onClick={() => navigate(`/${town.id}/info`)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/20 bg-[#0b111c]/90 text-white shadow-xl backdrop-blur hover:bg-white/10" aria-label="返回企业资料目录"><ChevronLeft className="h-5 w-5" /></button><div className="rounded-xl border border-white/15 bg-[#0b111c]/90 px-4 py-3 shadow-xl backdrop-blur"><p className="text-xs tracking-[0.14em] text-cyan-100/65 uppercase">三维园区视图</p><h1 className="mt-1 text-base font-semibold">{town.name}</h1></div></div>
       <div className="pointer-events-auto hidden items-center gap-2 rounded-xl border border-white/15 bg-[#0b111c]/90 px-3 py-2 text-xs text-white/65 shadow-xl backdrop-blur sm:flex"><Rotate3D className="h-4 w-4 text-[#A4F4FD]" /><span>拖拽平移，右键拖拽或控制器旋转视角</span></div>
-    </header>
+      </header>
+      <div className="absolute right-4 top-20 z-20 flex items-center gap-1 rounded-md border border-white/15 bg-[#0b111c]/90 p-1 shadow-xl backdrop-blur sm:right-6 sm:top-24" aria-label="底图切换">
+        <Layers className="ml-2 h-4 w-4 text-cyan-100/70" aria-hidden="true" />
+        {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => setBaseMap(item.id)} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.id === 'satellite' ? <Satellite className="h-4 w-4" /> : item.label}</button>)}
+      </div>
 
     <aside className={`absolute bottom-4 left-0 top-20 z-20 flex transition-[width] duration-300 ease-in-out sm:bottom-6 sm:top-24 ${collapsed ? 'w-12 sm:left-0' : 'w-[min(24rem,calc(100vw))] sm:left-0'}`} aria-label="企业概要列表">
       {/* Background Gradient */}
