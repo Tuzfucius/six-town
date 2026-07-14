@@ -21,10 +21,24 @@ const satelliteStyle: StyleSpecification = {
   layers: [{ id: 'satellite', type: 'raster', source: 'esri' }],
 };
 
+const chineseRoadStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    amap: {
+      type: 'raster',
+      tiles: ['https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}'],
+      tileSize: 256,
+      attribution: '© 高德地图',
+    },
+  },
+  layers: [{ id: 'chinese-roads', type: 'raster', source: 'amap' }],
+};
+
 export const baseMaps: BaseMapOption[] = [
   { id: 'dark', label: '深色矢量', style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' },
-  { id: 'light', label: '浅色道路', style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json' },
+  { id: 'light', label: '中文道路', style: chineseRoadStyle },
   { id: 'satellite', label: '卫星影像', style: satelliteStyle },
 ];
 
 export const defaultBaseMap: BaseMapId = 'dark';
+export const defaultMetroBaseMap: BaseMapId = 'light';

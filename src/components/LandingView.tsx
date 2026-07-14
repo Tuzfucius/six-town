@@ -77,7 +77,7 @@ export default function LandingView() {
                 
                 <div className="mt-12 mb-12 flex flex-col items-center">
                   <button 
-                    onClick={() => navigate('/metro')}
+                    onClick={() => setIsExploring(true)}
                     className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md border border-white/30 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 px-8 py-4 font-semibold text-white text-base flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(164,244,253,0.2)]"
                   >
                     <span className="relative z-10 tracking-widest group-hover:text-[#A4F4FD] transition-colors">开始探索</span>
@@ -95,7 +95,17 @@ export default function LandingView() {
                 transition={{ duration: 0.6, delay: 0.15 }}
                 className="w-full max-w-6xl mx-auto flex flex-col items-center"
               >
-                <h2 className="text-3xl font-bold mb-10 text-white tracking-tight self-start ml-4">选择探索区域</h2>
+                <div className="mb-10 flex w-full items-center justify-between gap-4 px-4">
+                  <h2 className="text-3xl font-bold text-white tracking-tight">选择探索区域</h2>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/metro')}
+                    className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-cyan-200/40 bg-cyan-200/10 px-3 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-200/20"
+                  >
+                    <Map className="h-4 w-4" aria-hidden="true" />
+                    都市圈总览
+                  </button>
+                </div>
                 
                 <div 
                   className="chroma-grid"
