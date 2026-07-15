@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import Map, { Marker, NavigationControl, type MapRef } from 'react-map-gl/maplibre';
-import { ChevronLeft, ChevronRight, GripVertical, Layers, MapPin, Rotate3D } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crosshair, Filter, GripVertical, Layers, MapPin, Rotate3D, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
+import { motion, useScroll, useTransform, AnimatePresence, useReducedMotion } from 'motion/react';
 import { getEnterprisesByTown, getMapEnterprisesByTown } from '../data/enterprises';
 import { townsData } from '../data/towns';
 import type { Enterprise } from '../types/enterprise';
 import { baseMaps, defaultBaseMap, type BaseMapId } from '../data/mapStyles';
+import AutoTourControls from './AutoTourControls';
+import { useAutoTour } from '../useAutoTour';
 
 function enableBuildings(map: maplibregl.Map) {
   if (map.getLayer('enterprise-3d-buildings') || !map.getSource('carto')) return;
@@ -84,18 +86,67 @@ export default function TownMapView() {
   const { townId } = useParams<{ townId: string }>();
   const town = townId ? townsData[townId] : undefined;
   const mapRef = useRef<MapRef>(null);
+  const reduceMotion = useReducedMotion();
   const [baseMap, setBaseMap] = useState<BaseMapId>(defaultBaseMap);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 639px)').matches);
+  const [industry, setIndustry] = useState('');
+  const [onlySelected, setOnlySelected] = useState(false);
   const enterprises = getEnterprisesByTown(townId ?? '');
   const [selected, setSelected] = useState<Enterprise | null>(() => enterprises[0] ?? null);
   const mapEnterprises = getMapEnterprisesByTown(townId ?? '');
+  const industries = useMemo(() => [...new Set(mapEnterprises.map((enterprise) => enterprise.primaryIndustry))].sort(), [mapEnterprises]);
+  const tourEnterprises = useMemo(
+    () => industry ? mapEnterprises.filter((enterprise) => enterprise.primaryIndustry === industry) : mapEnterprises,
+    [industry, mapEnterprises],
+  );
+  const visibleMapEnterprises = onlySelected && selected
+    ? mapEnterprises.filter((enterprise) => enterprise.id === selected.id)
+    : tourEnterprises;
   const usesRollerList = enterprises.length >= 3;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const focusEnterprise = useCallback((enterprise: Enterprise) => {
+    setSelected(enterprise);
+    if (!town) return;
+    const center = enterprise.longitude !== undefined && enterprise.latitude !== undefined
+      ? [enterprise.longitude, enterprise.latitude] as [number, number]
+      : [town.mapCenter.longitude, town.mapCenter.latitude] as [number, number];
+    mapRef.current?.flyTo({ center, zoom: 16, pitch: 62, bearing: -38, duration: reduceMotion ? 0 : 850 });
+  }, [reduceMotion, town]);
+
+  const tour = useAutoTour({
+    itemCount: tourEnterprises.length,
+    onVisit: (index) => {
+      const enterprise = tourEnterprises[index];
+      if (enterprise) focusEnterprise(enterprise);
+    },
+  });
+
+  const chooseEnterprise = useCallback((enterprise: Enterprise) => {
+    tour.pauseForUser();
+    focusEnterprise(enterprise);
+  }, [focusEnterprise, tour.pauseForUser]);
+
+  const fitAllEnterprises = useCallback(() => {
+    tour.pauseForUser();
+    if (!town || mapEnterprises.length === 0) return;
+    const coordinates = mapEnterprises.map((enterprise) => [enterprise.longitude!, enterprise.latitude!] as [number, number]);
+    if (coordinates.length === 1) {
+      mapRef.current?.flyTo({ center: coordinates[0], zoom: 16, duration: reduceMotion ? 0 : 700 });
+      return;
+    }
+    const longitudes = coordinates.map(([longitude]) => longitude);
+    const latitudes = coordinates.map(([, latitude]) => latitude);
+    mapRef.current?.fitBounds(
+      [[Math.min(...longitudes), Math.min(...latitudes)], [Math.max(...longitudes), Math.max(...latitudes)]],
+      { padding: 100, duration: reduceMotion ? 0 : 800, maxZoom: 16 },
+    );
+  }, [mapEnterprises, reduceMotion, tour.pauseForUser, town]);
+
   useEffect(() => {
     if (!town || !mapRef.current) return;
-    mapRef.current.flyTo({ center: [town.mapCenter.longitude, town.mapCenter.latitude], zoom: 14, pitch: 58, bearing: -26, duration: 900 });
-  }, [town]);
+    mapRef.current.flyTo({ center: [town.mapCenter.longitude, town.mapCenter.latitude], zoom: 14, pitch: 58, bearing: -26, duration: reduceMotion ? 0 : 900 });
+  }, [reduceMotion, town]);
   useEffect(() => {
     setSelected(enterprises[0] ?? null);
   }, [townId]);
@@ -107,26 +158,30 @@ export default function TownMapView() {
     });
     return () => cancelAnimationFrame(frame);
   }, [selected?.id, usesRollerList]);
-  useEffect(() => {
-    if (selected) chooseEnterprise(selected);
-  }, [selected?.id]);
   if (!town) return <main className="grid min-h-screen place-items-center bg-[#0c0c0c] text-white">未找到对应小镇。</main>;
-
-  const chooseEnterprise = (enterprise: Enterprise) => {
-    setSelected(enterprise);
-    const center = enterprise.longitude !== undefined && enterprise.latitude !== undefined
-      ? [enterprise.longitude, enterprise.latitude] as [number, number]
-      : [town.mapCenter.longitude, town.mapCenter.latitude] as [number, number];
-    mapRef.current?.flyTo({ center, zoom: 16, pitch: 62, bearing: -38, duration: 850 });
-  };
 
   const mapStyle = baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style;
 
   return <main className="relative h-screen overflow-hidden bg-[#080b12] text-white">
-    <Map ref={mapRef} initialViewState={{ ...town.mapCenter, zoom: 14, pitch: 58, bearing: -26 }} mapStyle={mapStyle} dragRotate touchPitch interactive onLoad={(event) => enableBuildings(event.target)} onStyleLoad={(event) => enableBuildings(event.target)} className="absolute inset-0" attributionControl={false}>
-      {mapEnterprises.map((enterprise) => (
+    <Map
+      ref={mapRef}
+      initialViewState={{ ...town.mapCenter, zoom: 14, pitch: 58, bearing: -26 }}
+      mapStyle={mapStyle}
+      dragRotate
+      touchPitch
+      interactive
+      onDragStart={tour.pauseForUser}
+      onZoomStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
+      onRotateStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
+      onPitchStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
+      onLoad={(event) => enableBuildings(event.target)}
+      onStyleLoad={(event) => enableBuildings(event.target)}
+      className="absolute inset-0"
+      attributionControl={false}
+    >
+      {visibleMapEnterprises.map((enterprise) => (
         <Marker key={enterprise.id} longitude={enterprise.longitude!} latitude={enterprise.latitude!} anchor="bottom" onClick={(event) => { event.originalEvent.stopPropagation(); chooseEnterprise(enterprise); }}>
-          <div aria-label={`定位 ${enterprise.name}`} title={`查看 ${enterprise.name}`} className="group relative grid h-10 w-10 cursor-pointer place-items-center">
+          <div aria-label={`定位 ${enterprise.name}`} title={`查看 ${enterprise.name}`} className="pointer-events-none group relative grid h-10 w-10 cursor-pointer place-items-center">
             <span className={`absolute bottom-4 h-20 w-4 rounded-full blur-md transition-all group-hover:h-28 group-focus-visible:h-28 ${enterprise.isCrossTownEnterprise ? 'bg-amber-300/80' : selected?.id === enterprise.id ? 'bg-cyan-200/90' : 'bg-cyan-300/65'}`} />
             <span className={`relative grid h-9 w-9 place-items-center rounded-full border shadow-lg transition-transform group-hover:scale-110 group-focus-visible:scale-110 ${enterprise.isCrossTownEnterprise ? 'border-amber-200 bg-amber-400/90 text-slate-950' : selected?.id === enterprise.id ? 'border-white bg-cyan-200 text-slate-950 scale-110' : 'border-cyan-100/80 bg-[#0b111c]/90 text-cyan-100'}`}><MapPin className="h-4 w-4" aria-hidden="true" /></span>
           </div>
@@ -142,8 +197,37 @@ export default function TownMapView() {
       </header>
       <div className="absolute right-4 top-20 z-20 flex items-center gap-1 rounded-md border border-white/15 bg-[#0b111c]/90 p-1 shadow-xl backdrop-blur sm:right-6 sm:top-24" aria-label="底图切换">
         <Layers className="ml-2 h-4 w-4 text-cyan-100/70" aria-hidden="true" />
-        {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => setBaseMap(item.id)} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.label}</button>)}
+        {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => { tour.pauseForUser(); setBaseMap(item.id); }} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.label}</button>)}
       </div>
+
+      <section className="absolute right-4 top-[7.75rem] z-20 flex max-w-[calc(100vw-2rem)] items-center gap-1 rounded-md border border-white/15 bg-[#0b111c]/90 p-1 shadow-xl backdrop-blur sm:right-6 sm:top-[8.5rem]" aria-label="地图企业筛选">
+        <Filter className="ml-2 h-4 w-4 shrink-0 text-cyan-100/70" aria-hidden="true" />
+        <label className="sr-only" htmlFor="map-industry-filter">按产业筛选地图企业</label>
+        <select
+          id="map-industry-filter"
+          value={industry}
+          onChange={(event) => { tour.pauseForUser(); setOnlySelected(false); setIndustry(event.target.value); }}
+          className="h-8 min-w-0 max-w-40 bg-transparent px-1 text-xs text-white/75 outline-none"
+        >
+          <option value="" className="bg-slate-950">全部产业</option>
+          {industries.map((item) => <option key={item} value={item} className="bg-slate-950">{item}</option>)}
+        </select>
+        <button type="button" onClick={() => { tour.pauseForUser(); setOnlySelected((value) => !value); }} aria-pressed={onlySelected} disabled={!selected} className={`h-8 whitespace-nowrap rounded px-2 text-xs ${onlySelected ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10 disabled:opacity-40'}`}>仅当前</button>
+        <button type="button" onClick={fitAllEnterprises} className="grid h-8 w-8 shrink-0 place-items-center rounded text-white/65 hover:bg-white/10 hover:text-white" aria-label="适配全部企业点位" title="适配全部企业点位"><Crosshair className="h-4 w-4" /></button>
+      </section>
+
+      <AutoTourControls
+        status={tour.status}
+        currentIndex={tour.currentIndex}
+        itemCount={tourEnterprises.length}
+        onPlay={tour.play}
+        onPause={tour.pause}
+        onPrevious={tour.previous}
+        onNext={tour.next}
+        onStop={tour.stop}
+        itemLabel="企业"
+        className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 -translate-x-1/2 sm:bottom-6"
+      />
 
     <aside className={`absolute bottom-4 left-0 top-20 z-20 flex transition-[width] duration-300 ease-in-out sm:bottom-6 sm:top-24 ${collapsed ? 'w-12 sm:left-0' : 'w-[min(24rem,calc(100vw))] sm:left-0'}`} aria-label="企业概要列表">
       {/* Background Gradient */}
@@ -202,16 +286,15 @@ export default function TownMapView() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="absolute bottom-8 right-8 z-30 w-80 rounded-2xl border border-white/10 bg-[#0b111c]/90 p-5 shadow-2xl backdrop-blur-xl origin-bottom-right"
+          className="absolute bottom-20 left-4 right-4 z-30 max-h-[42vh] overflow-y-auto rounded-lg border border-white/10 bg-[#0b111c]/95 p-4 shadow-2xl backdrop-blur-xl sm:bottom-8 sm:left-auto sm:right-8 sm:w-80 sm:max-h-none sm:rounded-lg sm:p-5 origin-bottom-right"
         >
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2 text-[#A4F4FD] font-medium text-sm">
               <MapPin className="h-4 w-4" />
               {selected.name}
             </div>
-            <button onClick={() => setSelected(null)} className="text-white/40 hover:text-white transition-colors">
-              <span className="sr-only">Close</span>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <button type="button" onClick={() => { tour.pauseForUser(); setSelected(null); }} className="grid h-8 w-8 place-items-center rounded text-white/40 hover:bg-white/10 hover:text-white transition-colors" aria-label="关闭企业详情" title="关闭企业详情">
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
           <p className="text-xs text-[#A4F4FD]/60 mb-2">{selected.primaryIndustry} {selected.secondaryIndustries.length > 0 && `· ${selected.secondaryIndustries[0]}`}</p>
