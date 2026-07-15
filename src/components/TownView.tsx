@@ -1,5 +1,17 @@
-import { useMemo } from 'react';
-import { BadgeCheck, ChevronLeft, ExternalLink, MapPin, Search, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import {
+  BadgeCheck,
+  Building2,
+  Check,
+  ChevronLeft,
+  ExternalLink,
+  GitCompareArrows,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getCountedEnterprisesByTown, getEnterprisesByTown, getIndustryFilters } from '../data/enterprises';
 import { townsData } from '../data/towns';
@@ -7,121 +19,162 @@ import type { Enterprise } from '../types/enterprise';
 import TownBackground from './TownBackground';
 import TownMotionGraphic from './TownMotionGraphic';
 
-function EnterpriseCard({ enterprise }: { enterprise: Enterprise, key?: string }) {
+type ChainStage = '上游' | '中游' | '下游';
+
+const chainStages: ChainStage[] = ['上游', '中游', '下游'];
+
+function matchesChainStage(enterprise: Enterprise, stage: string) {
+  return !stage || enterprise.industryChainPosition.includes(stage);
+}
+
+function optionCounts(items: Enterprise[], getValue: (enterprise: Enterprise) => string) {
+  return items.reduce<Record<string, number>>((counts, enterprise) => {
+    const value = getValue(enterprise);
+    if (value) counts[value] = (counts[value] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function DetailSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <div
-      className="group relative flex-none h-full min-h-[400px] w-16 sm:w-20 md:w-24 snap-center overflow-hidden rounded-3xl border border-white/10 transition-[width,background-color,border-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:w-[85vw] sm:hover:w-[500px] md:hover:w-[700px] bg-white/5 hover:bg-[#0c121c]/95 hover:border-[#A4F4FD]/30 backdrop-blur-md shadow-lg"
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-[#A4F4FD]/5 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
-      
-      {/* Collapsed State */}
-      <div className="absolute inset-0 flex flex-col items-center justify-start pt-8 opacity-100 transition-opacity duration-300 group-hover:opacity-0 group-hover:pointer-events-none">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#A4F4FD]/80 shadow-[0_0_8px_rgba(164,244,253,0.8)] shrink-0 mb-8" />
-        
-        <div 
-          className="relative flex-1 w-full overflow-hidden flex justify-center pb-8"
-          style={{
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)'
-          }}
-        >
-          <h2 className="text-lg font-medium tracking-[0.2em] text-white/90 whitespace-nowrap" style={{ writingMode: 'vertical-rl' }}>
-            {enterprise.name}
-          </h2>
+    <section className="border-t border-white/10 pt-5">
+      <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold text-white/50">
+        {icon}
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function EnterpriseDetail({ enterprise }: { enterprise: Enterprise }) {
+  return (
+    <article className="flex h-full min-h-0 flex-col" aria-labelledby={`enterprise-${enterprise.id}`}>
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6 lg:p-8" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-md border border-cyan-200/20 bg-cyan-200/10 px-2.5 py-1 text-xs font-medium text-cyan-100">
+            {enterprise.primaryIndustry}
+          </span>
+          <span className="text-xs text-white/45">{enterprise.enterpriseType}</span>
+          {enterprise.isCrossTownEnterprise && <span className="text-xs text-amber-200">跨镇应用企业</span>}
+          {enterprise.isHistoricalDuplicate && <span className="text-xs text-white/55">历史项目</span>}
+        </div>
+
+        <h2 id={`enterprise-${enterprise.id}`} className="mt-4 text-2xl font-semibold text-white sm:text-3xl">
+          {enterprise.name}
+        </h2>
+        <p className="mt-4 text-sm leading-7 text-white/70">{enterprise.summary}</p>
+
+        <div className="mt-7 grid gap-6 xl:grid-cols-2">
+          <DetailSection
+            title="核心产品与技术"
+            icon={<span className="h-1.5 w-1.5 rounded-full bg-cyan-200" />}
+          >
+            {enterprise.productsAndTechnology.length > 0 ? (
+              <ul className="space-y-2 text-sm leading-6 text-white/80">
+                {enterprise.productsAndTechnology.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-white/30" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm text-white/45">公开资料暂未提供</p>}
+          </DetailSection>
+
+          <DetailSection
+            title="产业链位置"
+            icon={<GitCompareArrows className="h-4 w-4 text-cyan-200" />}
+          >
+            <p className="text-sm leading-6 text-white/80">{enterprise.industryChainPosition}</p>
+            {enterprise.secondaryIndustries.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {enterprise.secondaryIndustries.map((tag) => (
+                  <span key={tag} className="rounded border border-white/10 bg-black/20 px-2 py-1 text-xs text-white/60">{tag}</span>
+                ))}
+              </div>
+            )}
+          </DetailSection>
+
+          <DetailSection
+            title="空间位置"
+            icon={<MapPin className="h-4 w-4 text-cyan-200" />}
+          >
+            <p className="text-sm leading-6 text-white/80">{enterprise.address}</p>
+            <p className="mt-2 text-xs leading-5 text-white/50">{enterprise.addressNature}</p>
+            <p className="mt-3 text-xs leading-5 text-white/60">{enterprise.townRelationship}</p>
+          </DetailSection>
+
+          <DetailSection
+            title="资料来源与更新时间"
+            icon={<BadgeCheck className="h-4 w-4 text-cyan-200" />}
+          >
+            <p className="text-xs text-white/50">更新于 {enterprise.updatedAt || '未标注'}</p>
+            {enterprise.sources.length > 0 ? (
+              <div className="mt-3 flex flex-col items-start gap-2">
+                {enterprise.sources.map((source) => (
+                  <a
+                    key={`${source.url}-${source.title}`}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs leading-5 text-cyan-100 hover:text-white"
+                  >
+                    {source.title}<ExternalLink className="h-3 w-3 shrink-0" />
+                  </a>
+                ))}
+              </div>
+            ) : <p className="mt-2 text-xs text-white/45">暂无可公开访问的来源链接</p>}
+            {enterprise.verificationNote && <p className="mt-3 text-xs leading-5 text-white/45">{enterprise.verificationNote}</p>}
+          </DetailSection>
         </div>
       </div>
 
-      {/* Expanded State */}
-      <div className="absolute inset-0 w-[85vw] sm:w-[500px] md:w-[700px] opacity-0 transition-opacity duration-500 delay-150 group-hover:opacity-100 p-6 md:p-10 flex flex-col pointer-events-none group-hover:pointer-events-auto overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="px-2.5 py-1 rounded-full bg-[#A4F4FD]/10 border border-[#A4F4FD]/20 text-xs font-medium text-[#A4F4FD]">
-              {enterprise.primaryIndustry}
-            </span>
-            <span className="text-xs text-white/40">
-              {enterprise.id} · {enterprise.enterpriseType}
-            </span>
-            {enterprise.isCrossTownEnterprise && <span className="text-xs text-amber-200">跨界应用企业</span>}
-            {enterprise.isHistoricalDuplicate && <span className="text-xs text-white/55">历史项目</span>}
-          </div>
-          
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 tracking-tight">{enterprise.name}</h2>
-          
-          <p className="text-sm md:text-base text-white/70 leading-relaxed mb-8">
-            {enterprise.summary}
-          </p>
+      {enterprise.officialWebsite && (
+        <footer className="flex-none border-t border-white/10 px-5 py-4 sm:px-6 lg:px-8">
+          <a
+            href={enterprise.officialWebsite}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-md bg-cyan-200/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-200/20 hover:text-white"
+          >
+            访问企业官网 <ExternalLink className="h-4 w-4" />
+          </a>
+        </footer>
+      )}
+    </article>
+  );
+}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-white/10 pt-8">
-            <div className="space-y-6">
-              <div>
-                <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                  <span className="w-1 h-1 rounded-full bg-[#A4F4FD]" /> 产业链位置
-                </h3>
-                <p className="text-sm text-white/80 leading-relaxed">{enterprise.industryChainPosition}</p>
-              </div>
-              
-              {enterprise.productsAndTechnology.length > 0 && (
-                <div>
-                  <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                    <span className="w-1 h-1 rounded-full bg-[#A4F4FD]" /> 核心产品与技术
-                  </h3>
-                  <ul className="text-sm text-white/80 space-y-2">
-                    {enterprise.productsAndTechnology.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="mt-1.5 w-1 h-1 rounded-full bg-white/20 shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                  <MapPin className="h-3.5 w-3.5 text-[#A4F4FD]" /> 企业地址
-                </h3>
-                <p className="text-sm text-white/80">{enterprise.address}</p>
-                <p className="text-xs text-white/50 mt-2">{enterprise.addressNature}</p>
-              </div>
-
-              <div>
-                <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                  <BadgeCheck className="h-3.5 w-3.5 text-[#A4F4FD]" /> 小镇归属与核验
-                </h3>
-                <p className="text-sm text-white/80 leading-relaxed">{enterprise.townRelationship}</p>
-                {enterprise.verificationNote && <p className="mt-2 text-xs leading-5 text-white/55">{enterprise.verificationNote}</p>}
-              </div>
-              
-              {enterprise.secondaryIndustries.length > 0 && (
-                <div>
-                  <h3 className="flex items-center gap-2 text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-                    <span className="w-1 h-1 rounded-full bg-[#A4F4FD]" /> 细分领域
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {enterprise.secondaryIndustries.map(tag => (
-                      <span key={tag} className="px-2 py-1 rounded border border-white/10 bg-black/20 text-xs text-white/60">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+function ComparisonView({ enterprises, onClose }: { enterprises: Enterprise[]; onClose: () => void }) {
+  return (
+    <section className="flex h-full min-h-0 flex-col" aria-label="企业比较">
+      <header className="flex flex-none items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6">
+        <div>
+          <p className="text-xs text-cyan-100/70">企业比较</p>
+          <h2 className="mt-1 text-lg font-semibold">已选择 {enterprises.length} 家企业</h2>
         </div>
-
-        {(enterprise.officialWebsite || enterprise.sources.length > 0) && (
-          <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-            {enterprise.sources[0] ? <a href={enterprise.sources[0].url} target="_blank" rel="noreferrer" className="text-xs text-white/55 hover:text-white">核验来源 <ExternalLink className="ml-1 inline h-3 w-3" /></a> : <span />}
-            {enterprise.officialWebsite && <a href={enterprise.officialWebsite} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-medium text-[#A4F4FD] hover:text-white transition-colors bg-[#A4F4FD]/10 hover:bg-[#A4F4FD]/20 px-4 py-2 rounded-lg">
-              访问官网 <ExternalLink className="w-4 h-4" />
-            </a>}
-          </div>
-        )}
+        <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-md text-white/60 hover:bg-white/10 hover:text-white" aria-label="退出企业比较">
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+      <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-6">
+        <div className="grid min-w-[640px] gap-3" style={{ gridTemplateColumns: `repeat(${enterprises.length}, minmax(200px, 1fr))` }}>
+          {enterprises.map((enterprise) => (
+            <article key={enterprise.id} className="rounded-md border border-white/10 bg-black/20 p-4">
+              <span className="text-xs text-cyan-100">{enterprise.primaryIndustry}</span>
+              <h3 className="mt-2 text-lg font-semibold">{enterprise.name}</h3>
+              <dl className="mt-5 space-y-5 text-sm">
+                <div><dt className="text-xs text-white/40">企业类型</dt><dd className="mt-1 leading-6 text-white/75">{enterprise.enterpriseType}</dd></div>
+                <div><dt className="text-xs text-white/40">核心产品与技术</dt><dd className="mt-1 leading-6 text-white/75">{enterprise.productsAndTechnology.join('；') || '公开资料暂未提供'}</dd></div>
+                <div><dt className="text-xs text-white/40">产业链位置</dt><dd className="mt-1 leading-6 text-white/75">{enterprise.industryChainPosition}</dd></div>
+                <div><dt className="text-xs text-white/40">空间位置</dt><dd className="mt-1 leading-6 text-white/75">{enterprise.address}</dd></div>
+              </dl>
+            </article>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -129,87 +182,172 @@ export default function TownView() {
   const navigate = useNavigate();
   const { townId } = useParams<{ townId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState('');
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [isComparing, setIsComparing] = useState(false);
   const town = townId ? townsData[townId] : undefined;
   const townEnterprises = useMemo(() => getEnterprisesByTown(townId ?? ''), [townId]);
   const countedEnterprises = useMemo(() => getCountedEnterprisesByTown(townId ?? ''), [townId]);
-  
+
   const query = searchParams.get('q') ?? '';
   const industry = searchParams.get('industry') ?? '';
-  const filters = useMemo(() => getIndustryFilters(townEnterprises), [townEnterprises]);
+  const enterpriseType = searchParams.get('type') ?? '';
+  const chainStage = searchParams.get('chain') ?? '';
+  const industries = useMemo(() => getIndustryFilters(townEnterprises), [townEnterprises]);
+  const industryCounts = useMemo(() => optionCounts(townEnterprises, (enterprise) => enterprise.primaryIndustry), [townEnterprises]);
+  const typeCounts = useMemo(() => optionCounts(townEnterprises, (enterprise) => enterprise.enterpriseType), [townEnterprises]);
+  const enterpriseTypes = useMemo(() => Object.keys(typeCounts).sort(), [typeCounts]);
+  const chainCounts = useMemo(() => Object.fromEntries(chainStages.map((stage) => [stage, townEnterprises.filter((enterprise) => matchesChainStage(enterprise, stage)).length])), [townEnterprises]);
+
+  const visibleEnterprises = useMemo(() => townEnterprises.filter((enterprise) => {
+    const haystack = [enterprise.name, ...enterprise.aliases, enterprise.summary, enterprise.primaryIndustry, ...enterprise.secondaryIndustries].join(' ').toLowerCase();
+    return (!query || haystack.includes(query.toLowerCase()))
+      && (!industry || enterprise.primaryIndustry === industry)
+      && (!enterpriseType || enterprise.enterpriseType === enterpriseType)
+      && matchesChainStage(enterprise, chainStage);
+  }), [chainStage, enterpriseType, industry, query, townEnterprises]);
+
+  useEffect(() => {
+    setSelectedId((current) => visibleEnterprises.some((enterprise) => enterprise.id === current) ? current : (visibleEnterprises[0]?.id ?? ''));
+  }, [visibleEnterprises]);
+
+  useEffect(() => {
+    setCompareIds([]);
+    setIsComparing(false);
+  }, [townId]);
+
+  const selectedEnterprise = visibleEnterprises.find((enterprise) => enterprise.id === selectedId);
+  const comparedEnterprises = compareIds.map((id) => townEnterprises.find((enterprise) => enterprise.id === id)).filter((enterprise): enterprise is Enterprise => Boolean(enterprise));
 
   if (!town) return <main className="grid min-h-screen place-items-center bg-[#0c0c0c] text-white">未找到对应小镇。</main>;
-
-  const visibleEnterprises = townEnterprises.filter((enterprise) => {
-    const haystack = [enterprise.name, ...enterprise.aliases, enterprise.summary, enterprise.primaryIndustry, ...enterprise.secondaryIndustries].join(' ').toLowerCase();
-    return (!query || haystack.includes(query.toLowerCase())) && (!industry || enterprise.primaryIndustry === industry);
-  });
 
   const updateParams = (changes: Record<string, string>) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(changes).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key));
     setSearchParams(next, { replace: true });
   };
-  const clearFilters = () => updateParams({ q: '', industry: '' });
 
-  return <main className="relative min-h-screen overflow-x-hidden bg-[#080b12] text-white flex flex-col">
-    <TownBackground townId={town.id} color={town.color} />
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-      <TownMotionGraphic townId={town.id} color={town.color} />
-    </div>
-    <div className="relative z-10 flex flex-col h-screen max-h-screen w-full px-4 py-6 sm:px-6 lg:px-8">
-      {/* Header */}
-      <header className="flex-none flex flex-col md:flex-row items-start justify-between gap-4 border-b border-white/10 pb-6">
-        <div className="flex items-start gap-4">
-          <button type="button" onClick={() => navigate('/')} className="mt-1 grid h-10 w-10 place-items-center rounded-md border border-white/15 bg-white/5 text-white hover:bg-white/10 transition-colors" aria-label="返回六镇总览"><ChevronLeft className="h-5 w-5" /></button>
-          <div>
-            <p className="text-xs font-medium tracking-[0.18em] text-cyan-200/70 uppercase">企业展示图谱</p>
-            <h1 className="mt-2 text-2xl font-semibold sm:text-3xl tracking-tight">{town.name}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">{town.description}</p>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col md:items-end gap-3 text-left md:text-right text-sm text-white/55">
-          <div><strong className="block text-2xl text-white">{countedEnterprises.length}</strong> 已收录企业</div>
-          <button type="button" onClick={() => navigate(`/${town.id}/map`)} className="rounded-md border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-200/20 transition-colors">查看企业位置</button>
-        </div>
-      </header>
+  const clearFilters = () => updateParams({ q: '', industry: '', type: '', chain: '' });
+  const toggleComparison = (id: string) => {
+    setCompareIds((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      return current.length < 3 ? [...current, id] : current;
+    });
+  };
 
-      {/* Filters */}
-      <section className="flex-none mt-6 rounded-2xl border border-white/10 bg-[#101722]/80 py-3 px-4 shadow-xl shadow-black/10 backdrop-blur-sm" aria-label="企业筛选">
-        <div className="flex flex-wrap md:flex-nowrap gap-3 items-center">
-          <label className="flex flex-1 items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 h-10 min-w-[200px] focus-within:border-white/30 transition-colors">
-            <Search className="h-4 w-4 text-white/45" />
-            <input value={query} onChange={(event) => updateParams({ q: event.target.value })} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/35" placeholder="搜索企业名称或业务关键词..." />
-          </label>
-          <label className="flex flex-1 md:flex-none items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 h-10 min-w-[160px] focus-within:border-white/30 transition-colors">
-            <SlidersHorizontal className="h-4 w-4 text-white/45" />
-            <select value={industry} onChange={(event) => updateParams({ industry: event.target.value })} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none appearance-none cursor-pointer text-white/80">
-              <option value="">全部产业</option>
-              {filters.map((item) => <option key={item} value={item} className="bg-slate-900">{item}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={clearFilters} className="h-10 rounded-md border border-white/10 px-4 text-sm text-white/70 hover:bg-white/10 transition-colors whitespace-nowrap">清除筛选</button>
-        </div>
-      </section>
-
-      <div className="flex-none mt-4 flex items-center justify-between text-sm text-white/55">
-        <span>显示 {visibleEnterprises.length} 个相关条目</span>
+  return (
+    <main className="relative min-h-screen overflow-x-hidden bg-[#080b12] text-white lg:h-screen lg:overflow-hidden">
+      <TownBackground townId={town.id} color={town.color} />
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <TownMotionGraphic townId={town.id} color={town.color} />
       </div>
 
-      {/* Horizontal Accordion Showcase */}
-      <section className="flex-1 mt-4 relative">
-        <div className="absolute inset-0 flex items-center gap-3 overflow-x-auto pb-6 pt-2 px-2 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none' }}>
-          {visibleEnterprises.length > 0 ? (
-            visibleEnterprises.map((enterprise) => (
-              <EnterpriseCard key={enterprise.id} enterprise={enterprise} />
-            ))
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-white/40 border border-dashed border-white/15 rounded-3xl bg-[#101722]/50">
-              <Search className="h-8 w-8 mb-4 opacity-50" />
-              <p>没有符合条件的企业条目。</p>
+      <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:h-screen lg:min-h-0 lg:px-8">
+        <header className="flex flex-none flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-4">
+            <button type="button" onClick={() => navigate('/')} className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-md border border-white/15 bg-white/5 text-white transition-colors hover:bg-white/10" aria-label="返回六镇总览">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <p className="text-xs font-medium text-cyan-200/70">企业展示图谱</p>
+              <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">{town.name}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">{town.description}</p>
             </div>
-          )}
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-5 pl-14 text-sm text-white/55 md:pl-0">
+            <div><strong className="block text-2xl text-white">{countedEnterprises.length}</strong>已收录企业</div>
+            <button type="button" onClick={() => navigate(`/${town.id}/map`)} className="rounded-md border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-100 transition-colors hover:bg-cyan-200/20">查看企业位置</button>
+          </div>
+        </header>
+
+        <section className="mt-4 flex-none border-y border-white/10 bg-[#101722]/75 px-3 py-3 backdrop-blur-sm" aria-label="企业筛选">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex h-10 min-w-[220px] flex-[2] items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 focus-within:border-white/30">
+              <Search className="h-4 w-4 text-white/45" />
+              <input value={query} onChange={(event) => updateParams({ q: event.target.value })} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/35" placeholder="搜索企业或业务关键词" aria-label="搜索企业" />
+            </label>
+            <FilterSelect label="产业筛选" value={industry} onChange={(value) => updateParams({ industry: value })} icon={<SlidersHorizontal className="h-4 w-4" />}>
+              <option value="">全部产业（{townEnterprises.length}）</option>
+              {industries.map((item) => <option key={item} value={item}>{item}（{industryCounts[item]}）</option>)}
+            </FilterSelect>
+            <FilterSelect label="企业类型筛选" value={enterpriseType} onChange={(value) => updateParams({ type: value })} icon={<Building2 className="h-4 w-4" />}>
+              <option value="">全部类型</option>
+              {enterpriseTypes.map((item) => <option key={item} value={item}>{item}（{typeCounts[item]}）</option>)}
+            </FilterSelect>
+            <FilterSelect label="产业链位置筛选" value={chainStage} onChange={(value) => updateParams({ chain: value })} icon={<GitCompareArrows className="h-4 w-4" />}>
+              <option value="">全产业链</option>
+              {chainStages.map((stage) => <option key={stage} value={stage}>{stage}（{chainCounts[stage]}）</option>)}
+            </FilterSelect>
+            <button type="button" onClick={clearFilters} className="h-10 rounded-md px-3 text-sm text-white/65 hover:bg-white/10 hover:text-white">清除筛选</button>
+          </div>
+        </section>
+
+        <div className="mt-3 flex flex-none flex-wrap items-center justify-between gap-2 text-sm text-white/55">
+          <span>显示 {visibleEnterprises.length} 个相关条目</span>
+          <button
+            type="button"
+            disabled={compareIds.length < 2}
+            onClick={() => setIsComparing(true)}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-white/10 px-3 text-white/75 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <GitCompareArrows className="h-4 w-4" />比较企业（{compareIds.length}/3）
+          </button>
         </div>
-      </section>
-    </div>
-  </main>;
+
+        <section className="mt-3 min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(260px,32%)_minmax(0,1fr)] lg:overflow-hidden lg:border lg:border-white/10 lg:bg-[#0b111b]/88 lg:backdrop-blur-md" aria-label="企业目录">
+          <div className="flex gap-2 overflow-x-auto pb-3 lg:block lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-white/10 lg:p-2" style={{ scrollbarWidth: 'thin' }}>
+            {visibleEnterprises.map((enterprise) => {
+              const isSelected = enterprise.id === selectedId;
+              const isCompared = compareIds.includes(enterprise.id);
+              const comparisonFull = compareIds.length >= 3 && !isCompared;
+              return (
+                <div key={enterprise.id} className={`relative w-[78vw] max-w-[320px] shrink-0 rounded-md border transition-colors sm:w-[300px] lg:mb-2 lg:w-full lg:max-w-none ${isSelected ? 'border-cyan-200/35 bg-cyan-200/10' : 'border-white/10 bg-[#101722]/90 hover:bg-white/[0.07]'}`}>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedId(enterprise.id); setIsComparing(false); }}
+                    className="block w-full p-4 pr-12 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
+                    aria-pressed={isSelected}
+                    aria-label={`查看${enterprise.name}详情`}
+                  >
+                    <span className="block truncate text-xs text-cyan-100/75">{enterprise.primaryIndustry}</span>
+                    <strong className="mt-1.5 block text-base font-semibold leading-6 text-white">{enterprise.name}</strong>
+                    <span className="mt-2 block line-clamp-2 text-xs leading-5 text-white/50">{enterprise.summary}</span>
+                  </button>
+                  <label className={`absolute right-3 top-3 grid h-7 w-7 place-items-center rounded border ${isCompared ? 'border-cyan-200/50 bg-cyan-200/20 text-cyan-100' : 'border-white/15 bg-black/20 text-transparent'} ${comparisonFull ? 'cursor-not-allowed opacity-35' : 'cursor-pointer'}`} title={isCompared ? '移出比较' : '加入比较'}>
+                    <input type="checkbox" checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="sr-only" aria-label={`${isCompared ? '移出' : '加入'}比较：${enterprise.name}`} />
+                    <Check className="h-4 w-4" />
+                  </label>
+                </div>
+              );
+            })}
+            {visibleEnterprises.length === 0 && (
+              <div className="flex min-h-48 w-full flex-col items-center justify-center border border-dashed border-white/15 bg-[#101722]/50 text-white/40 lg:h-full">
+                <Search className="mb-3 h-7 w-7 opacity-50" />
+                <p>没有符合条件的企业条目。</p>
+              </div>
+            )}
+          </div>
+
+          <div className="min-h-[520px] overflow-hidden border border-white/10 bg-[#0b111b]/92 backdrop-blur-md lg:min-h-0 lg:border-0">
+            {isComparing && comparedEnterprises.length >= 2
+              ? <ComparisonView enterprises={comparedEnterprises} onClose={() => setIsComparing(false)} />
+              : selectedEnterprise
+                ? <EnterpriseDetail enterprise={selectedEnterprise} />
+                : <div className="grid h-full min-h-80 place-items-center text-sm text-white/45">请从企业列表中选择一个条目</div>}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function FilterSelect({ label, value, onChange, icon, children }: { label: string; value: string; onChange: (value: string) => void; icon: ReactNode; children: ReactNode }) {
+  return (
+    <label className="flex h-10 min-w-[150px] flex-1 items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 text-white/45 focus-within:border-white/30 md:flex-none">
+      {icon}
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-full min-w-0 flex-1 cursor-pointer appearance-none bg-transparent text-sm text-white/80 outline-none" aria-label={label}>
+        {children}
+      </select>
+    </label>
+  );
 }
