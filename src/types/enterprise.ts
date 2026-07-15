@@ -5,6 +5,26 @@ export interface EnterpriseSource {
   accessedAt: string;
 }
 
+export interface EnterpriseMilestone {
+  date: string;
+  title: string;
+  description?: string;
+  source: EnterpriseSource;
+}
+
+export interface EnterpriseGalleryItem {
+  src: string;
+  alt: string;
+  caption?: string;
+  source: EnterpriseSource;
+}
+
+export interface EnterpriseFeaturedProduct {
+  name: string;
+  description: string;
+  source: EnterpriseSource;
+}
+
 export interface Enterprise {
   id: string;
   name: string;
@@ -35,4 +55,7 @@ export interface Enterprise {
   verificationNote?: string;
   isCrossTownEnterprise?: boolean;
   isHistoricalDuplicate?: boolean;
+  milestones?: EnterpriseMilestone[];
+  gallery?: EnterpriseGalleryItem[];
+  featuredProducts?: EnterpriseFeaturedProduct[];
 }
