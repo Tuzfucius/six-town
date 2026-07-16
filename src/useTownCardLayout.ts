@@ -19,11 +19,13 @@ interface Rect {
 }
 
 const CARD_WIDTH = 208;
-const CARD_HEIGHT = 112;
+const CARD_HEIGHT = 132;
 const VIEWPORT_PADDING = 18;
-const COLLISION_GAP = 12;
+const COLLISION_GAP = 18;
+const CARD_REVEAL_ZOOM = 7.7;
 const CANDIDATES = [
-  [0, -104], [-126, -94], [126, -94], [-156, -24], [156, -24], [0, -178],
+  [0, -112], [-132, -104], [132, -104], [-172, -36], [172, -36], [0, -202],
+  [-230, -130], [230, -130], [-220, 26], [220, 26], [-116, -232], [116, -232],
 ] as const;
 
 const overlaps = (a: Rect, b: Rect) => !(
@@ -46,7 +48,7 @@ export function useTownCardLayout(
     if (!map || !enabled) return;
     const canvas = map.getCanvas();
     const compactViewport = canvas.clientWidth < 920;
-    const overviewScale = map.getZoom() <= 9.25;
+    const overviewScale = map.getZoom() >= CARD_REVEAL_ZOOM && map.getZoom() <= 9.25;
     const ordered = [...towns].sort((a, b) => Number(b.id === selectedTownId) - Number(a.id === selectedTownId));
     const occupied: Rect[] = [];
     const next: Record<string, TownCardLayout> = {};

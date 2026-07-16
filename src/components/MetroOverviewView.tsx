@@ -52,7 +52,7 @@ export default function MetroOverviewView() {
   const [hoveredTown, setHoveredTown] = useState<Town | null>(null);
   const [selectedTown, setSelectedTown] = useState<Town | null>(null);
   const intro = useMetroIntro({ enabled: wantsIntro, reduceMotion });
-  const markersVisible = intro.stage === 'revealing' || intro.stage === 'ready';
+  const markersVisible = ['approaching', 'revealing', 'ready'].includes(intro.stage);
   const { layouts, recalculate } = useTownCardLayout(mapRef, allTowns, selectedTown?.id ?? null, markersVisible);
   const selectedStyle = useMemo(
     () => baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style,
