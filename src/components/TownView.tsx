@@ -301,7 +301,7 @@ export default function TownView() {
           </button>
         </div>
 
-        <section className="mt-3 min-h-0 flex-1 overflow-hidden border border-white/10 bg-[#0b111b]/88 backdrop-blur-md" aria-label="企业目录">
+        <section className="mt-3 min-h-0 flex-1 overflow-hidden border border-white/10 bg-white/[0.025] backdrop-blur-sm" aria-label="企业目录">
           {visibleEnterprises.length === 0 ? (
             <div className="flex h-full min-h-72 w-full flex-col items-center justify-center border border-dashed border-white/15 bg-[#101722]/50 text-white/40">
               <Search className="mb-3 h-7 w-7 opacity-50" />
@@ -342,14 +342,17 @@ export default function TownView() {
                       layout
                       key={enterprise.id}
                       transition={{ layout: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }}
-                      className="relative min-w-[560px] flex-1 snap-center overflow-hidden rounded-3xl border border-cyan-200/30 bg-[#0b111b]/95 shadow-[0_0_32px_rgba(164,244,253,0.1)] backdrop-blur-md"
+                      className="relative min-w-[560px] flex-1 snap-center overflow-hidden rounded-3xl border bg-white/[0.055] shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+                      style={{ borderColor: `${town.color}66` }}
                     >
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.42, delay: 0.16 }}
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-200/[0.07] to-transparent"
+                        className="pointer-events-none absolute inset-0"
+                        style={{ background: `radial-gradient(circle at 14% 0%, ${town.color}24, transparent 38%), linear-gradient(135deg, rgba(255,255,255,0.075), ${town.color}0d 72%, transparent)` }}
                       />
+                      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent" />
                       <ComparisonToggle enterprise={enterprise} checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="absolute right-4 top-4 z-10" />
                       <motion.div
                         initial={{ opacity: 0, x: 18 }}
