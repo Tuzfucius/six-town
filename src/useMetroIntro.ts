@@ -45,6 +45,14 @@ export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
 
   const moveTo = useCallback((map: MapLibreMap, options: Parameters<MapLibreMap['easeTo']>[0]) => new Promise<void>((resolve) => {
     const handleMoveEnd = () => {
+      if (!cancelledRef.current) {
+        const targetCenter = Array.isArray(options.center) ? options.center : null;
+        const currentCenter = map.getCenter();
+        const reachedCenter = !targetCenter
+          || (Math.abs(currentCenter.lng - targetCenter[0]) < 0.08 && Math.abs(currentCenter.lat - targetCenter[1]) < 0.08);
+        const reachedZoom = options.zoom === undefined || Math.abs(map.getZoom() - options.zoom) < 0.08;
+        if (!reachedCenter || !reachedZoom) return;
+      }
       map.off('moveend', handleMoveEnd);
       resolve();
     };
