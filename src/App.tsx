@@ -9,6 +9,7 @@ import LandingView from "./components/LandingView";
 import TownView from "./components/TownView";
 import TownMapView from "./components/TownMapView";
 import MetroOverviewView from "./components/MetroOverviewView";
+import IndustryChainView from "./components/IndustryChainView";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -28,6 +29,7 @@ function AnimatedRoutes() {
         <Routes location={location}>
           <Route path="/" element={<LandingView />} />
           <Route path="/metro" element={<MetroOverviewView />} />
+          <Route path="/industry-chain" element={<IndustryChainView />} />
           <Route path="/:townId/info" element={<TownView />} />
           <Route path="/:townId/map" element={<TownMapView />} />
         </Routes>

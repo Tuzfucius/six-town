@@ -1,0 +1,112 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Map as MapLibreMap } from 'maplibre-gl';
+import type { MapRef } from 'react-map-gl/maplibre';
+import { globeProjection, globeSky } from './data/mapStyles';
+
+export type IntroStage = 'loading' | 'globe' | 'eastChina' | 'approaching' | 'revealing' | 'ready';
+
+const FINAL_VIEW = { center: [120.32, 30.42] as [number, number], zoom: 8.15, pitch: 24, bearing: -8 };
+
+const setGesturesEnabled = (map: MapLibreMap, enabled: boolean) => {
+  const action = enabled ? 'enable' : 'disable';
+  map.boxZoom[action]();
+  map.doubleClickZoom[action]();
+  map.dragPan[action]();
+  map.dragRotate[action]();
+  map.keyboard[action]();
+  map.scrollZoom[action]();
+  map.touchZoomRotate[action]();
+};
+
+interface UseMetroIntroOptions {
+  enabled: boolean;
+  reduceMotion: boolean;
+}
+
+export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
+  const [stage, setStage] = useState<IntroStage>('loading');
+  const cancelledRef = useRef(false);
+  const activeMapRef = useRef<MapLibreMap | null>(null);
+
+  const applyGlobe = useCallback((map: MapLibreMap) => {
+    map.setProjection(globeProjection);
+    map.setSky(globeSky);
+  }, []);
+
+  const finish = useCallback((map: MapLibreMap) => {
+    map.stop();
+    applyGlobe(map);
+    map.jumpTo(FINAL_VIEW);
+    setGesturesEnabled(map, true);
+    setStage('ready');
+  }, [applyGlobe]);
+
+  const moveTo = useCallback((map: MapLibreMap, options: Parameters<MapLibreMap['flyTo']>[0]) => new Promise<void>((resolve) => {
+    const handleMoveEnd = () => {
+      if (!cancelledRef.current) {
+        const targetCenter = Array.isArray(options.center) ? options.center : null;
+        const currentCenter = map.getCenter();
+        const reachedCenter = !targetCenter
+          || (Math.abs(currentCenter.lng - targetCenter[0]) < 0.08 && Math.abs(currentCenter.lat - targetCenter[1]) < 0.08);
+        const reachedZoom = options.zoom === undefined || Math.abs(map.getZoom() - options.zoom) < 0.08;
+        if (!reachedCenter || !reachedZoom) return;
+      }
+      map.off('moveend', handleMoveEnd);
+      resolve();
+    };
+    map.on('moveend', handleMoveEnd);
+    map.flyTo(options);
+  }), []);
+
+  const start = useCallback(async (mapRef: MapRef) => {
+    const map = mapRef.getMap();
+    activeMapRef.current = map;
+    cancelledRef.current = false;
+    applyGlobe(map);
+
+    if (!enabled || reduceMotion) {
+      finish(map);
+      return;
+    }
+
+    setGesturesEnabled(map, false);
+    map.jumpTo({ center: [72, 20], zoom: 0.9, pitch: 0, bearing: 0 });
+    setStage('globe');
+
+    await moveTo(map, { ...FINAL_VIEW, duration: 5600, curve: 1.18, essential: false });
+    if (cancelledRef.current) return;
+    setStage('revealing');
+  }, [applyGlobe, enabled, finish, moveTo, reduceMotion]);
+
+  const completeReveal = useCallback(() => {
+    const map = activeMapRef.current;
+    if (!map || stage !== 'revealing') return;
+    setGesturesEnabled(map, true);
+    setStage('ready');
+  }, [stage]);
+
+  const skip = useCallback(() => {
+    cancelledRef.current = true;
+    const map = activeMapRef.current;
+    if (map) finish(map);
+  }, [finish]);
+
+  useEffect(() => () => {
+    cancelledRef.current = true;
+    const map = activeMapRef.current;
+    if (map) {
+      map.stop();
+      setGesturesEnabled(map, true);
+    }
+  }, []);
+
+  return {
+    stage,
+    isInteractive: stage === 'ready',
+    isIntroActive: enabled && stage !== 'ready',
+    start,
+    skip,
+    completeReveal,
+    applyGlobe,
+  };
+}

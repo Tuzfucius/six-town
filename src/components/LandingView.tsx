@@ -1,15 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Map } from 'lucide-react';
+import { ArrowRight, Boxes, Earth, Map, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import baseBgImg from '../assets/images/base_bg_1783729372930.jpg';
 import revealBgImg from '../assets/images/reveal_bg_1783729383684.jpg';
 import { townsData } from '../data/towns';
+import { explorationRoutes } from '../data/exploration';
+
+type ExploreMode = 'region' | 'industry';
 
 export default function LandingView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [isExploring, setIsExploring] = useState(false);
+  const [exploreMode, setExploreMode] = useState<ExploreMode>('region');
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -49,13 +53,14 @@ export default function LandingView() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="flex justify-between items-center pointer-events-auto"
         >
-          <div 
+          <button
+            type="button"
             className="text-white/40 hover:text-white/80 transition-colors font-medium tracking-widest text-sm flex items-center gap-3 cursor-pointer mix-blend-plus-lighter" 
             onClick={() => setIsExploring(false)}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white/40"></span>
             杭湖嘉绍六镇图谱平台
-          </div>
+          </button>
         </motion.header>
 
         {/* Center Content */}
@@ -75,14 +80,26 @@ export default function LandingView() {
                   看见<span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-500">新质生产力</span>
                 </h1>
                 
-                <div className="mt-12 mb-12 flex flex-col items-center">
-                  <button 
-                    onClick={() => setIsExploring(true)}
-                    className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md border border-white/30 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 px-8 py-4 font-semibold text-white text-base flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(164,244,253,0.2)]"
+                <div className="mt-12 mb-12 flex w-full max-w-xl flex-col items-stretch justify-center gap-3 px-4 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/metro?intro=1')}
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/30 bg-white/5 px-8 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
                   >
-                    <span className="relative z-10 tracking-widest group-hover:text-[#A4F4FD] transition-colors">开始探索</span>
-                    <ArrowRight className="w-5 h-5 relative z-10 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
+                    <Earth className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">空间导览</span>
+                    <ArrowRight className="relative z-10 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsExploring(true)}
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/30 bg-white/5 px-8 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
+                  >
+                    <Map className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">浏览六镇</span>
+                    <ArrowRight className="relative z-10 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
                   </button>
                 </div>
               </motion.div>
@@ -93,21 +110,24 @@ export default function LandingView() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
-                className="w-full max-w-6xl mx-auto flex flex-col items-center"
+                className="mx-auto flex max-h-[76vh] w-full max-w-6xl flex-col items-center overflow-y-auto px-1 pb-4"
               >
-                <div className="mb-10 flex w-full items-center justify-between gap-4 px-4">
-                  <h2 className="text-3xl font-bold text-white tracking-tight">选择探索区域</h2>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/metro')}
-                    className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-cyan-200/40 bg-cyan-200/10 px-3 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-200/20"
-                  >
-                    <Map className="h-4 w-4" aria-hidden="true" />
-                    都市圈总览
-                  </button>
+                <div className="mb-6 flex w-full flex-col items-start justify-between gap-4 px-4 sm:flex-row sm:items-center">
+                  <div className="text-left">
+                    <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">选择探索方式</h2>
+                    <p className="mt-1 text-sm text-white/55">从空间区域或产业主题进入六镇图谱</p>
+                  </div>
+                  <div className="flex h-10 items-center rounded-md border border-white/15 bg-black/30 p-1" role="group" aria-label="探索方式">
+                    <button type="button" aria-pressed={exploreMode === 'region'} onClick={() => setExploreMode('region')} className={`h-8 rounded px-3 text-sm transition-colors ${exploreMode === 'region' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
+                      按区域探索
+                    </button>
+                    <button type="button" aria-pressed={exploreMode === 'industry'} onClick={() => setExploreMode('industry')} className={`h-8 rounded px-3 text-sm transition-colors ${exploreMode === 'industry' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
+                      按产业探索
+                    </button>
+                  </div>
                 </div>
-                
-                <div 
+
+                {exploreMode === 'region' ? <div
                   className="chroma-grid"
                       onMouseMove={(e) => {
                         const grid = e.currentTarget;
@@ -132,21 +152,22 @@ export default function LandingView() {
                       }}
                     >
                       {Object.values(townsData).map((town, index) => (
-                        <motion.div
+                        <motion.button
+                          type="button"
                           key={town.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.375, delay: 0.075 * index }}
                           onClick={() => navigate(`/${town.id}/info`)}
-                          className="chroma-card group cursor-pointer text-left backdrop-blur-md"
+                          className="chroma-card group cursor-pointer text-left backdrop-blur-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
                           style={{
                             '--card-border': town.color,
                             '--spotlight-color': `${town.color}33`, // 20% opacity
                             '--card-gradient': `linear-gradient(135deg, rgba(255,255,255,0.03) 0%, ${town.color}15 100%)`,
                           } as React.CSSProperties}
                         >
-                          <div className="chroma-overlay rounded-[20px]"></div>
-                          <div className="chroma-fade rounded-[20px]"></div>
+                          <div className="chroma-overlay"></div>
+                          <div className="chroma-fade"></div>
                           
                           <div className="relative z-10 p-6 flex flex-col h-full">
                             <div className="flex justify-between items-start mb-4">
@@ -171,9 +192,67 @@ export default function LandingView() {
                               </div>
                             </div>
                           </div>
-                        </motion.div>
+                        </motion.button>
                       ))}
                     </div>
+                  : <div className="grid w-full gap-3 px-4 sm:grid-cols-2 xl:grid-cols-4">
+                      {explorationRoutes.map((route, index) => (
+                        <motion.button
+                          type="button"
+                          key={route.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.35, delay: index * 0.08 }}
+                          onClick={() => navigate(`/metro?route=${route.id}`)}
+                          className="group min-h-64 rounded-lg border border-white/15 bg-black/30 p-5 text-left backdrop-blur-md transition-colors hover:border-cyan-200/50 hover:bg-cyan-200/[0.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
+                        >
+                          <span className="mb-6 grid h-10 w-10 place-items-center rounded-md bg-cyan-200/10 text-cyan-100">
+                            <Route className="h-5 w-5" aria-hidden="true" />
+                          </span>
+                          <h3 className="text-xl font-semibold text-white">{route.name}</h3>
+                          <p className="mt-3 min-h-12 text-sm leading-relaxed text-white/60">{route.description}</p>
+                          <div className="mt-5 flex flex-wrap gap-1.5">
+                            {route.townIds.map((townId, townIndex) => (
+                              <span key={townId} className="flex items-center gap-1 text-xs text-white/55">
+                                {townIndex > 0 && <ArrowRight className="h-3 w-3" aria-hidden="true" />}
+                                {townsData[townId].name.replace('/未来科技城', '')}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-cyan-100/80">
+                            在都市圈中查看路线
+                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                          </span>
+                        </motion.button>
+                      ))}
+                      <motion.button
+                        type="button"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, delay: explorationRoutes.length * 0.08 }}
+                        onClick={() => navigate('/industry-chain')}
+                        className="group min-h-64 rounded-lg border border-white/15 bg-black/30 p-5 text-left backdrop-blur-md transition-colors hover:border-cyan-200/50 hover:bg-cyan-200/[0.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
+                      >
+                        <span className="mb-6 grid h-10 w-10 place-items-center rounded-md bg-cyan-200/10 text-cyan-100">
+                          <Boxes className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <h3 className="text-xl font-semibold text-white">产业链视图</h3>
+                        <p className="mt-3 min-h-12 text-sm leading-relaxed text-white/60">
+                          按上游基础设施、中游技术与产品、下游应用浏览六镇企业。
+                        </p>
+                        <div className="mt-5 flex flex-wrap gap-1.5 text-xs text-white/55">
+                          <span>上游基础</span>
+                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                          <span>中游技术</span>
+                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                          <span>下游应用</span>
+                        </div>
+                        <span className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-cyan-100/80">
+                          进入产业链视图
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                        </span>
+                      </motion.button>
+                    </div>}
               </motion.div>
             )}
           </AnimatePresence>
