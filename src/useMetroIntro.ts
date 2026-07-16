@@ -107,7 +107,7 @@ export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
   return {
     stage,
     isInteractive: stage === 'ready',
-    isIntroActive: !['loading', 'ready'].includes(stage),
+    isIntroActive: enabled && stage !== 'ready',
     start,
     skip,
     completeReveal,
