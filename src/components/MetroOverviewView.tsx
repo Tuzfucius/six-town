@@ -52,7 +52,7 @@ export default function MetroOverviewView() {
   const [hoveredTown, setHoveredTown] = useState<Town | null>(null);
   const [selectedTown, setSelectedTown] = useState<Town | null>(null);
   const intro = useMetroIntro({ enabled: wantsIntro, reduceMotion });
-  const markersVisible = ['approaching', 'revealing', 'ready'].includes(intro.stage);
+  const markersVisible = ['globe', 'revealing', 'ready'].includes(intro.stage);
   const { layouts, recalculate } = useTownCardLayout(mapRef, allTowns, selectedTown?.id ?? null, markersVisible);
   const selectedStyle = useMemo(
     () => baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style,
@@ -147,7 +147,6 @@ export default function MetroOverviewView() {
           const isOnRoute = !selectedRoute || selectedRoute.townIds.includes(town.id);
           const layout = layouts[town.id];
           const showCard = isOnRoute && (isSelected || layout?.mode === 'card');
-          const connector = markerConnector(layout?.offsetX ?? 0, layout?.offsetY ?? -82);
           return (
             <Marker key={town.id} longitude={town.mapCenter.longitude} latitude={town.mapCenter.latitude} anchor="center">
               <motion.button
@@ -171,10 +170,25 @@ export default function MetroOverviewView() {
                   <MapPin className="h-4 w-4" aria-hidden="true" />
                 </span>
 
-                {showCard && layout && (
-                  <>
-                    <span className="pointer-events-none absolute left-1/2 top-1/2 h-px origin-left opacity-60" style={{ ...connector, backgroundColor: town.color }} />
-                    <span
+                <AnimatePresence>
+                  {showCard && layout && (
+                    <motion.span
+                      key={`${town.id}-connector`}
+                      initial={reduceMotion ? false : { opacity: 0 }}
+                      animate={{ opacity: 0.6 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-px origin-left"
+                      style={{ ...markerConnector(layout.offsetX, layout.offsetY + 6), backgroundColor: town.color }}
+                    />
+                  )}
+                  {showCard && layout && (
+                    <motion.span
+                      key={`${town.id}-card`}
+                      initial={reduceMotion ? false : { opacity: 0, filter: 'blur(8px)' }}
+                      animate={{ opacity: 1, filter: 'blur(0px)' }}
+                      exit={reduceMotion ? undefined : { opacity: 0, filter: 'blur(6px)' }}
+                      transition={{ duration: reduceMotion ? 0 : 0.58, ease: [0.16, 1, 0.3, 1] }}
                       className="pointer-events-none absolute left-1/2 z-10 block w-52"
                       style={{
                         bottom: `${-layout.offsetY + 18}px`,
@@ -183,8 +197,10 @@ export default function MetroOverviewView() {
                     >
                       <motion.span
                         layout
-                        initial={reduceMotion ? false : { opacity: 0, scale: 0.88 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={reduceMotion ? false : { scale: 0.94 }}
+                        animate={{ scale: 1 }}
+                        exit={reduceMotion ? undefined : { scale: 0.96 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.62, ease: [0.16, 1, 0.3, 1] }}
                         className="relative block overflow-hidden rounded-lg border p-3 text-left shadow-2xl backdrop-blur-xl"
                         style={{
                         borderColor: `${town.color}88`,
@@ -200,9 +216,9 @@ export default function MetroOverviewView() {
                         </span>
                         <span className="mt-2 block text-[10px] text-white/55">收录企业 {getCountedEnterprisesByTown(town.id).length} 家</span>
                       </motion.span>
-                    </span>
-                  </>
-                )}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
 
                 {!showCard && <span className="pointer-events-none absolute top-full mt-1 whitespace-nowrap rounded bg-[#07111c]/90 px-1.5 py-1 text-[10px] text-white/75 backdrop-blur">{town.name}</span>}
               </motion.button>
