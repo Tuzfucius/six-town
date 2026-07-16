@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { motion } from 'motion/react';
 import {
   BadgeCheck,
   Building2,
@@ -34,6 +36,14 @@ function optionCounts(items: Enterprise[], getValue: (enterprise: Enterprise) =>
     if (value) counts[value] = (counts[value] ?? 0) + 1;
     return counts;
   }, {});
+}
+
+function enterpriseShortName(name: string) {
+  const shortened = name
+    .replace(/（[^）]+）/g, '')
+    .replace(/有限责任公司|股份有限公司|有限公司|科技/g, '')
+    .trim();
+  return shortened.length > 8 ? `${shortened.slice(0, 8)}…` : shortened || name;
 }
 
 function DetailSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
@@ -299,50 +309,89 @@ export default function TownView() {
           </button>
         </div>
 
-        <section className="mt-3 min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(260px,32%)_minmax(0,1fr)] lg:overflow-hidden lg:border lg:border-white/10 lg:bg-[#0b111b]/88 lg:backdrop-blur-md" aria-label="企业目录">
-          <div className="flex gap-2 overflow-x-auto pb-3 lg:block lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-white/10 lg:p-2" style={{ scrollbarWidth: 'thin' }}>
-            {visibleEnterprises.map((enterprise) => {
-              const isSelected = enterprise.id === selectedId;
-              const isCompared = compareIds.includes(enterprise.id);
-              const comparisonFull = compareIds.length >= 3 && !isCompared;
-              return (
-                <div key={enterprise.id} className={`relative w-[78vw] max-w-[320px] shrink-0 rounded-md border transition-colors sm:w-[300px] lg:mb-2 lg:w-full lg:max-w-none ${isSelected ? 'border-cyan-200/35 bg-cyan-200/10' : 'border-white/10 bg-[#101722]/90 hover:bg-white/[0.07]'}`}>
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedId(enterprise.id); setIsComparing(false); }}
-                    className="block w-full p-4 pr-12 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
-                    aria-pressed={isSelected}
-                    aria-label={`查看${enterprise.name}详情`}
-                  >
-                    <span className="block truncate text-xs text-cyan-100/75">{enterprise.primaryIndustry}</span>
-                    <strong className="mt-1.5 block text-base font-semibold leading-6 text-white">{enterprise.name}</strong>
-                    <span className="mt-2 block line-clamp-2 text-xs leading-5 text-white/50">{enterprise.summary}</span>
-                  </button>
-                  <label className={`absolute right-3 top-3 grid h-7 w-7 place-items-center rounded border ${isCompared ? 'border-cyan-200/50 bg-cyan-200/20 text-cyan-100' : 'border-white/15 bg-black/20 text-transparent'} ${comparisonFull ? 'cursor-not-allowed opacity-35' : 'cursor-pointer'}`} title={isCompared ? '移出比较' : '加入比较'}>
-                    <input type="checkbox" checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="sr-only" aria-label={`${isCompared ? '移出' : '加入'}比较：${enterprise.name}`} />
-                    <Check className="h-4 w-4" />
-                  </label>
-                </div>
-              );
-            })}
-            {visibleEnterprises.length === 0 && (
-              <div className="flex min-h-48 w-full flex-col items-center justify-center border border-dashed border-white/15 bg-[#101722]/50 text-white/40 lg:h-full">
-                <Search className="mb-3 h-7 w-7 opacity-50" />
-                <p>没有符合条件的企业条目。</p>
+        <section className="mt-3 min-h-0 flex-1 overflow-hidden border border-white/10 bg-[#0b111b]/88 backdrop-blur-md" aria-label="企业目录">
+          {visibleEnterprises.length === 0 ? (
+            <div className="flex h-full min-h-72 w-full flex-col items-center justify-center border border-dashed border-white/15 bg-[#101722]/50 text-white/40">
+              <Search className="mb-3 h-7 w-7 opacity-50" />
+              <p>没有符合条件的企业条目。</p>
+            </div>
+          ) : isComparing && comparedEnterprises.length >= 2 ? (
+            <ComparisonView enterprises={comparedEnterprises} onClose={() => setIsComparing(false)} />
+          ) : (
+            <>
+              <div className="flex gap-2 overflow-x-auto border-b border-white/10 p-2 lg:hidden" style={{ scrollbarWidth: 'thin' }}>
+                {visibleEnterprises.map((enterprise) => {
+                  const isSelected = enterprise.id === selectedId;
+                  const isCompared = compareIds.includes(enterprise.id);
+                  const comparisonFull = compareIds.length >= 3 && !isCompared;
+                  return (
+                    <div key={enterprise.id} className={`relative w-[78vw] max-w-[320px] shrink-0 rounded-md border transition-colors sm:w-[300px] ${isSelected ? 'border-cyan-200/35 bg-cyan-200/10' : 'border-white/10 bg-[#101722]/90'}`}>
+                      <button type="button" onClick={() => setSelectedId(enterprise.id)} className="block w-full p-4 pr-12 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200" aria-pressed={isSelected} aria-label={`查看${enterprise.name}详情`}>
+                        <span className="block truncate text-xs text-cyan-100/75">{enterprise.primaryIndustry}</span>
+                        <strong className="mt-1.5 block text-base font-semibold leading-6 text-white">{enterprise.name}</strong>
+                        <span className="mt-2 block line-clamp-2 text-xs leading-5 text-white/50">{enterprise.summary}</span>
+                      </button>
+                      <ComparisonToggle enterprise={enterprise} checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="absolute right-3 top-3" />
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
+              <div className="min-h-[520px] overflow-hidden lg:hidden">
+                {selectedEnterprise && <EnterpriseDetail enterprise={selectedEnterprise} />}
+              </div>
 
-          <div className="min-h-[520px] overflow-hidden border border-white/10 bg-[#0b111b]/92 backdrop-blur-md lg:min-h-0 lg:border-0">
-            {isComparing && comparedEnterprises.length >= 2
-              ? <ComparisonView enterprises={comparedEnterprises} onClose={() => setIsComparing(false)} />
-              : selectedEnterprise
-                ? <EnterpriseDetail enterprise={selectedEnterprise} />
-                : <div className="grid h-full min-h-80 place-items-center text-sm text-white/45">请从企业列表中选择一个条目</div>}
-          </div>
+              <div className="hidden h-full min-h-0 gap-2 overflow-x-auto p-2 lg:flex" style={{ scrollbarWidth: 'thin' }}>
+                {visibleEnterprises.map((enterprise, index) => {
+                  const isSelected = enterprise.id === selectedId;
+                  const isCompared = compareIds.includes(enterprise.id);
+                  const comparisonFull = compareIds.length >= 3 && !isCompared;
+                  return isSelected ? (
+                    <motion.div
+                      layout
+                      key={enterprise.id}
+                      transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                      className="relative min-w-[560px] flex-1 overflow-hidden rounded-md border border-cyan-200/30 bg-[#0b111b]/95 shadow-[0_0_30px_rgba(103,232,249,0.08)]"
+                    >
+                      <ComparisonToggle enterprise={enterprise} checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="absolute right-4 top-4 z-10" />
+                      <EnterpriseDetail enterprise={enterprise} />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      layout
+                      key={enterprise.id}
+                      transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                      className="group relative w-28 shrink-0 overflow-hidden rounded-md border border-white/10 bg-[#101722]/80 transition-colors hover:border-white/25 hover:bg-white/[0.07]"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(enterprise.id)}
+                        className="flex h-full w-full flex-col items-start p-4 pb-14 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
+                        aria-label={`展开${enterprise.name}`}
+                      >
+                        <span className="text-xs tabular-nums text-white/35">{String(index + 1).padStart(2, '0')}</span>
+                        <span className="mt-5 h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(164,244,253,0.65)]" />
+                        <strong className="mt-4 line-clamp-3 text-sm font-semibold leading-6 text-white/85">{enterpriseShortName(enterprise.name)}</strong>
+                        <span className="mt-3 line-clamp-3 text-[11px] leading-5 text-white/40">{enterprise.primaryIndustry}</span>
+                      </button>
+                      <ComparisonToggle enterprise={enterprise} checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="absolute bottom-3 left-1/2 -translate-x-1/2" />
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
       </div>
     </main>
+  );
+}
+
+function ComparisonToggle({ enterprise, checked, disabled, onChange, className = '' }: { enterprise: Enterprise; checked: boolean; disabled: boolean; onChange: () => void; className?: string }) {
+  return (
+    <label className={`grid h-7 w-7 place-items-center rounded border ${checked ? 'border-cyan-200/50 bg-cyan-200/20 text-cyan-100' : 'border-white/15 bg-[#080b12]/85 text-transparent'} ${disabled ? 'cursor-not-allowed opacity-35' : 'cursor-pointer hover:border-white/30'} ${className}`} title={checked ? '移出比较' : '加入比较'}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} className="sr-only" aria-label={`${checked ? '移出' : '加入'}比较：${enterprise.name}`} />
+      <Check className="h-4 w-4" aria-hidden="true" />
+    </label>
   );
 }
 
@@ -353,48 +402,137 @@ interface FilterOption {
 
 function FilterSelect({ label, value, onChange, icon, options }: { label: string; value: string; onChange: (value: string) => void; icon: ReactNode; options: FilterOption[] }) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0, width: 180, maxHeight: 256, openUp: false });
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
   const selectedOption = options.find((option) => option.value === value) ?? options[0];
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
+
+  const updateMenuPosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 8;
+    const desiredHeight = Math.min(256, options.length * 44 + 12);
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const spaceAbove = rect.top - viewportPadding;
+    const openUp = spaceBelow < Math.min(180, desiredHeight) && spaceAbove > spaceBelow;
+    const width = Math.min(Math.max(rect.width, 280), window.innerWidth - viewportPadding * 2);
+    const left = Math.min(Math.max(viewportPadding, rect.left), window.innerWidth - width - viewportPadding);
+    setMenuPosition({
+      left,
+      top: openUp ? rect.top - 6 : rect.bottom + 6,
+      width,
+      maxHeight: Math.max(120, Math.min(desiredHeight, (openUp ? spaceAbove : spaceBelow) - 6)),
+      openUp,
+    });
+  }, [options.length]);
+
+  useLayoutEffect(() => {
+    if (open) updateMenuPosition();
+  }, [open, updateMenuPosition]);
 
   useEffect(() => {
     if (!open) return;
     const closeOnOutsidePointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener('pointerdown', closeOnOutsidePointer);
     document.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
     return () => {
       document.removeEventListener('pointerdown', closeOnOutsidePointer);
       document.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
     };
-  }, [open]);
+  }, [open, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    setActiveIndex(selectedIndex);
+    const frame = requestAnimationFrame(() => {
+      menuRef.current?.querySelector<HTMLButtonElement>(`[data-option-index="${selectedIndex}"]`)?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, selectedIndex]);
+
+  const selectOption = (option: FilterOption) => {
+    onChange(option.value);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const handleListKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    let nextIndex = activeIndex;
+    if (event.key === 'ArrowDown') nextIndex = (activeIndex + 1) % options.length;
+    else if (event.key === 'ArrowUp') nextIndex = (activeIndex - 1 + options.length) % options.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = options.length - 1;
+    else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selectOption(options[activeIndex]);
+      return;
+    } else if (event.key === 'Tab') {
+      setOpen(false);
+      return;
+    } else return;
+    event.preventDefault();
+    setActiveIndex(nextIndex);
+    menuRef.current?.querySelector<HTMLButtonElement>(`[data-option-index="${nextIndex}"]`)?.focus();
+  };
 
   return (
     <div ref={rootRef} className="relative min-w-[150px] flex-1 md:flex-none">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => { setActiveIndex(selectedIndex); setOpen((current) => !current); }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
+            setActiveIndex(selectedIndex);
             setOpen(true);
           }
         }}
         aria-label={label}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
         className={`flex h-10 w-full items-center gap-2 rounded-md border bg-[#0b111c] px-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200 ${open ? 'border-cyan-200/50' : 'border-white/15 hover:border-white/30'}`}
       >
         <span className="shrink-0 text-white/45" aria-hidden="true">{icon}</span>
         <span className="min-w-0 flex-1 truncate text-sm text-white/85">{selectedOption?.label}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
-      {open && (
-        <div role="listbox" aria-label={label} className="absolute left-0 top-[calc(100%+0.375rem)] z-50 max-h-64 min-w-full w-max max-w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-md border border-white/15 bg-[#0b111c] p-1.5 shadow-2xl shadow-black/60">
-          {options.map((option) => {
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          id={listboxId}
+          role="listbox"
+          aria-label={label}
+          onKeyDown={handleListKeyDown}
+          className="fixed z-[1000] overflow-y-auto rounded-md border border-white/20 bg-[#0b111c] p-1.5 shadow-2xl shadow-black/70"
+          style={{
+            left: menuPosition.left,
+            top: menuPosition.top,
+            width: menuPosition.width,
+            maxHeight: menuPosition.maxHeight,
+            transform: menuPosition.openUp ? 'translateY(-100%)' : undefined,
+          }}
+        >
+          {options.map((option, index) => {
             const selected = option.value === value;
             return (
               <button
@@ -402,15 +540,18 @@ function FilterSelect({ label, value, onChange, icon, options }: { label: string
                 type="button"
                 role="option"
                 aria-selected={selected}
-                onClick={() => { onChange(option.value); setOpen(false); }}
-                className={`flex min-h-9 w-full items-center gap-3 rounded px-3 py-2 text-left text-sm transition-colors ${selected ? 'bg-cyan-200/15 text-cyan-100' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
+                data-option-index={index}
+                onFocus={() => setActiveIndex(index)}
+                onClick={() => selectOption(option)}
+                className={`flex min-h-9 w-full items-center gap-3 rounded px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none ${selected ? 'bg-cyan-200/15 text-cyan-100' : 'text-white/75 hover:bg-white/10 hover:text-white focus-visible:bg-white/10'}`}
               >
                 <Check className={`h-4 w-4 shrink-0 ${selected ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
                 <span className="whitespace-normal leading-5">{option.label}</span>
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
