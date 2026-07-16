@@ -1,4 +1,4 @@
-import type { StyleSpecification } from 'maplibre-gl';
+import type { SkySpecification, StyleSpecification } from 'maplibre-gl';
 
 export type BaseMapId = 'dark' | 'satellite';
 
@@ -28,3 +28,9 @@ export const baseMaps: BaseMapOption[] = [
 
 export const defaultBaseMap: BaseMapId = 'dark';
 export const defaultMetroBaseMap: BaseMapId = 'dark';
+
+export const globeProjection = { type: 'globe' } as const;
+
+export const globeSky: SkySpecification = {
+  'atmosphere-blend': 0.88,
+};
