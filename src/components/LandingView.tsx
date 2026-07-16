@@ -84,21 +84,22 @@ export default function LandingView() {
                   <button
                     type="button"
                     onClick={() => navigate('/metro?intro=1')}
-                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-lg border border-[#A4F4FD]/50 bg-[#A4F4FD]/10 px-6 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(164,244,253,0.12)] transition-all duration-300 hover:border-[#A4F4FD] hover:bg-[#A4F4FD]/15 hover:shadow-[0_0_30px_rgba(164,244,253,0.22)] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/30 bg-white/5 px-8 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
                   >
-                    <Earth className="relative z-10 h-5 w-5 text-[#A4F4FD]" aria-hidden="true" />
-                    <span className="relative z-10 tracking-widest">空间导览</span>
-                    <ArrowRight className="relative z-10 h-5 w-5 text-[#A4F4FD] transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
-                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/15 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
+                    <Earth className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">空间导览</span>
+                    <ArrowRight className="relative z-10 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsExploring(true)}
-                    className="group flex min-h-14 flex-1 items-center justify-center gap-3 rounded-lg border border-white/25 bg-white/5 px-6 py-4 text-base font-semibold text-white backdrop-blur-md transition-all duration-300 hover:border-white/50 hover:bg-white/10 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/30 bg-white/5 px-8 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
                   >
-                    <Map className="h-5 w-5 text-white/70 transition-colors group-hover:text-white" aria-hidden="true" />
-                    <span className="tracking-widest">浏览六镇</span>
-                    <ArrowRight className="h-5 w-5 text-white/60 transition-all duration-300 group-hover:translate-x-1 group-hover:text-white" aria-hidden="true" />
+                    <Map className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">浏览六镇</span>
+                    <ArrowRight className="relative z-10 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
                   </button>
                 </div>
               </motion.div>
