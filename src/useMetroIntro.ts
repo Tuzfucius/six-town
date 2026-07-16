@@ -5,7 +5,6 @@ import { globeProjection, globeSky } from './data/mapStyles';
 
 export type IntroStage = 'loading' | 'globe' | 'eastChina' | 'approaching' | 'revealing' | 'ready';
 
-const SESSION_KEY = 'six-town-metro-intro-seen';
 const FINAL_VIEW = { center: [120.32, 30.42] as [number, number], zoom: 8.15, pitch: 24, bearing: -8 };
 
 const setGesturesEnabled = (map: MapLibreMap, enabled: boolean) => {
@@ -34,16 +33,15 @@ export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
     map.setSky(globeSky);
   }, []);
 
-  const finish = useCallback((map: MapLibreMap, remember = true) => {
+  const finish = useCallback((map: MapLibreMap) => {
     map.stop();
     applyGlobe(map);
     map.jumpTo(FINAL_VIEW);
     setGesturesEnabled(map, true);
-    if (remember) sessionStorage.setItem(SESSION_KEY, '1');
     setStage('ready');
   }, [applyGlobe]);
 
-  const moveTo = useCallback((map: MapLibreMap, options: Parameters<MapLibreMap['easeTo']>[0]) => new Promise<void>((resolve) => {
+  const moveTo = useCallback((map: MapLibreMap, options: Parameters<MapLibreMap['flyTo']>[0]) => new Promise<void>((resolve) => {
     const handleMoveEnd = () => {
       if (!cancelledRef.current) {
         const targetCenter = Array.isArray(options.center) ? options.center : null;
@@ -57,7 +55,7 @@ export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
       resolve();
     };
     map.on('moveend', handleMoveEnd);
-    map.easeTo(options);
+    map.flyTo(options);
   }), []);
 
   const start = useCallback(async (mapRef: MapRef) => {
@@ -66,9 +64,8 @@ export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
     cancelledRef.current = false;
     applyGlobe(map);
 
-    const hasPlayed = sessionStorage.getItem(SESSION_KEY) === '1';
-    if (!enabled || reduceMotion || hasPlayed) {
-      finish(map, enabled && !hasPlayed);
+    if (!enabled || reduceMotion) {
+      finish(map);
       return;
     }
 
@@ -76,17 +73,8 @@ export function useMetroIntro({ enabled, reduceMotion }: UseMetroIntroOptions) {
     map.jumpTo({ center: [72, 20], zoom: 0.9, pitch: 0, bearing: 0 });
     setStage('globe');
 
-    await moveTo(map, { center: [105, 28], zoom: 2.15, pitch: 0, bearing: 0, duration: 2100, essential: false });
+    await moveTo(map, { ...FINAL_VIEW, duration: 5600, curve: 1.18, essential: false });
     if (cancelledRef.current) return;
-    setStage('eastChina');
-
-    await moveTo(map, { center: [116.6, 29.8], zoom: 4.65, pitch: 18, bearing: -4, duration: 1900, essential: false });
-    if (cancelledRef.current) return;
-    setStage('approaching');
-
-    await moveTo(map, { ...FINAL_VIEW, duration: 2300, essential: false });
-    if (cancelledRef.current) return;
-    sessionStorage.setItem(SESSION_KEY, '1');
     setStage('revealing');
   }, [applyGlobe, enabled, finish, moveTo, reduceMotion]);
 
