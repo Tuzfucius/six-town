@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Boxes, Map, Route } from 'lucide-react';
+import { ArrowRight, Boxes, Earth, Map, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import baseBgImg from '../assets/images/base_bg_1783729372930.jpg';
@@ -80,14 +80,25 @@ export default function LandingView() {
                   看见<span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-500">新质生产力</span>
                 </h1>
                 
-                <div className="mt-12 mb-12 flex flex-col items-center">
-                  <button 
-                    onClick={() => setIsExploring(true)}
-                    className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md border border-white/30 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 px-8 py-4 font-semibold text-white text-base flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(164,244,253,0.2)]"
+                <div className="mt-12 mb-12 flex w-full max-w-xl flex-col items-stretch justify-center gap-3 px-4 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/metro?intro=1')}
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-lg border border-[#A4F4FD]/50 bg-[#A4F4FD]/10 px-6 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(164,244,253,0.12)] transition-all duration-300 hover:border-[#A4F4FD] hover:bg-[#A4F4FD]/15 hover:shadow-[0_0_30px_rgba(164,244,253,0.22)] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
                   >
-                    <span className="relative z-10 tracking-widest group-hover:text-[#A4F4FD] transition-colors">开始探索</span>
-                    <ArrowRight className="w-5 h-5 relative z-10 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
+                    <Earth className="relative z-10 h-5 w-5 text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="relative z-10 tracking-widest">空间导览</span>
+                    <ArrowRight className="relative z-10 h-5 w-5 text-[#A4F4FD] transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/15 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsExploring(true)}
+                    className="group flex min-h-14 flex-1 items-center justify-center gap-3 rounded-lg border border-white/25 bg-white/5 px-6 py-4 text-base font-semibold text-white backdrop-blur-md transition-all duration-300 hover:border-white/50 hover:bg-white/10 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  >
+                    <Map className="h-5 w-5 text-white/70 transition-colors group-hover:text-white" aria-hidden="true" />
+                    <span className="tracking-widest">浏览六镇</span>
+                    <ArrowRight className="h-5 w-5 text-white/60 transition-all duration-300 group-hover:translate-x-1 group-hover:text-white" aria-hidden="true" />
                   </button>
                 </div>
               </motion.div>
