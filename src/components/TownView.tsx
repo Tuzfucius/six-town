@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   BadgeCheck,
   Building2,
   Check,
+  ChevronDown,
   ChevronLeft,
   ExternalLink,
   GitCompareArrows,
@@ -190,6 +191,7 @@ export default function TownView() {
   const countedEnterprises = useMemo(() => getCountedEnterprisesByTown(townId ?? ''), [townId]);
 
   const query = searchParams.get('q') ?? '';
+  const requestedEnterpriseId = searchParams.get('enterprise') ?? '';
   const industry = searchParams.get('industry') ?? '';
   const enterpriseType = searchParams.get('type') ?? '';
   const chainStage = searchParams.get('chain') ?? '';
@@ -208,8 +210,11 @@ export default function TownView() {
   }), [chainStage, enterpriseType, industry, query, townEnterprises]);
 
   useEffect(() => {
-    setSelectedId((current) => visibleEnterprises.some((enterprise) => enterprise.id === current) ? current : (visibleEnterprises[0]?.id ?? ''));
-  }, [visibleEnterprises]);
+    setSelectedId((current) => {
+      if (requestedEnterpriseId && visibleEnterprises.some((enterprise) => enterprise.id === requestedEnterpriseId)) return requestedEnterpriseId;
+      return visibleEnterprises.some((enterprise) => enterprise.id === current) ? current : (visibleEnterprises[0]?.id ?? '');
+    });
+  }, [requestedEnterpriseId, visibleEnterprises]);
 
   useEffect(() => {
     setCompareIds([]);
@@ -266,18 +271,18 @@ export default function TownView() {
               <Search className="h-4 w-4 text-white/45" />
               <input value={query} onChange={(event) => updateParams({ q: event.target.value })} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/35" placeholder="搜索企业或业务关键词" aria-label="搜索企业" />
             </label>
-            <FilterSelect label="产业筛选" value={industry} onChange={(value) => updateParams({ industry: value })} icon={<SlidersHorizontal className="h-4 w-4" />}>
-              <option value="">全部产业（{townEnterprises.length}）</option>
-              {industries.map((item) => <option key={item} value={item}>{item}（{industryCounts[item]}）</option>)}
-            </FilterSelect>
-            <FilterSelect label="企业类型筛选" value={enterpriseType} onChange={(value) => updateParams({ type: value })} icon={<Building2 className="h-4 w-4" />}>
-              <option value="">全部类型</option>
-              {enterpriseTypes.map((item) => <option key={item} value={item}>{item}（{typeCounts[item]}）</option>)}
-            </FilterSelect>
-            <FilterSelect label="产业链位置筛选" value={chainStage} onChange={(value) => updateParams({ chain: value })} icon={<GitCompareArrows className="h-4 w-4" />}>
-              <option value="">全产业链</option>
-              {chainStages.map((stage) => <option key={stage} value={stage}>{stage}（{chainCounts[stage]}）</option>)}
-            </FilterSelect>
+            <FilterSelect label="产业筛选" value={industry} onChange={(value) => updateParams({ industry: value })} icon={<SlidersHorizontal className="h-4 w-4" />} options={[
+              { value: '', label: `全部产业（${townEnterprises.length}）` },
+              ...industries.map((item) => ({ value: item, label: `${item}（${industryCounts[item]}）` })),
+            ]} />
+            <FilterSelect label="企业类型筛选" value={enterpriseType} onChange={(value) => updateParams({ type: value })} icon={<Building2 className="h-4 w-4" />} options={[
+              { value: '', label: '全部类型' },
+              ...enterpriseTypes.map((item) => ({ value: item, label: `${item}（${typeCounts[item]}）` })),
+            ]} />
+            <FilterSelect label="产业链位置筛选" value={chainStage} onChange={(value) => updateParams({ chain: value })} icon={<GitCompareArrows className="h-4 w-4" />} options={[
+              { value: '', label: '全产业链' },
+              ...chainStages.map((stage) => ({ value: stage, label: `${stage}（${chainCounts[stage]}）` })),
+            ]} />
             <button type="button" onClick={clearFilters} className="h-10 rounded-md px-3 text-sm text-white/65 hover:bg-white/10 hover:text-white">清除筛选</button>
           </div>
         </section>
@@ -341,13 +346,72 @@ export default function TownView() {
   );
 }
 
-function FilterSelect({ label, value, onChange, icon, children }: { label: string; value: string; onChange: (value: string) => void; icon: ReactNode; children: ReactNode }) {
+interface FilterOption {
+  value: string;
+  label: string;
+}
+
+function FilterSelect({ label, value, onChange, icon, options }: { label: string; value: string; onChange: (value: string) => void; icon: ReactNode; options: FilterOption[] }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selectedOption = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [open]);
+
   return (
-    <label className="flex h-10 min-w-[150px] flex-1 items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 text-white/45 focus-within:border-white/30 md:flex-none">
-      {icon}
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-full min-w-0 flex-1 cursor-pointer appearance-none bg-transparent text-sm text-white/80 outline-none" aria-label={label}>
-        {children}
-      </select>
-    </label>
+    <div ref={rootRef} className="relative min-w-[150px] flex-1 md:flex-none">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex h-10 w-full items-center gap-2 rounded-md border bg-[#0b111c] px-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200 ${open ? 'border-cyan-200/50' : 'border-white/15 hover:border-white/30'}`}
+      >
+        <span className="shrink-0 text-white/45" aria-hidden="true">{icon}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-white/85">{selectedOption?.label}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div role="listbox" aria-label={label} className="absolute left-0 top-[calc(100%+0.375rem)] z-50 max-h-64 min-w-full w-max max-w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-md border border-white/15 bg-[#0b111c] p-1.5 shadow-2xl shadow-black/60">
+          {options.map((option) => {
+            const selected = option.value === value;
+            return (
+              <button
+                key={option.value || '__all'}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => { onChange(option.value); setOpen(false); }}
+                className={`flex min-h-9 w-full items-center gap-3 rounded px-3 py-2 text-left text-sm transition-colors ${selected ? 'bg-cyan-200/15 text-cyan-100' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
+              >
+                <Check className={`h-4 w-4 shrink-0 ${selected ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
+                <span className="whitespace-normal leading-5">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

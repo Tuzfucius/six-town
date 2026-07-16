@@ -1,16 +1,15 @@
 import { useCallback, useMemo, useRef, useState, type MouseEvent } from 'react';
-import Map, { Layer, Marker, NavigationControl, Source, type MapLayerMouseEvent, type MapRef } from 'react-map-gl/maplibre';
+import Map, { Marker, NavigationControl, type MapRef } from 'react-map-gl/maplibre';
 import { ArrowLeft, ChevronRight, Layers, MapPin, Network } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { baseMaps, defaultMetroBaseMap, type BaseMapId } from '../data/mapStyles';
 import { enterprises, getCountedEnterprisesByTown } from '../data/enterprises';
 import { industryCollaborations, metroCities, townsData, type Town } from '../data/towns';
 import { useAutoTour } from '../useAutoTour';
 import AutoTourControls from './AutoTourControls';
+import { explorationRoutes } from '../data/exploration';
 
-const towns = Object.values(townsData);
-const collaborationLayerId = 'industry-collaborations';
-
+const allTowns = Object.values(townsData);
 const markerOffsets: Partial<Record<string, [number, number]>> = {
   dream: [-28, -16],
   ai: [28, 14],
@@ -28,32 +27,17 @@ function prefersReducedMotion() {
 
 export default function MetroOverviewView() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedRoute = explorationRoutes.find((route) => route.id === searchParams.get('route'));
+  const towns = useMemo(
+    () => selectedRoute ? selectedRoute.townIds.map((id) => townsData[id]).filter(Boolean) : allTowns,
+    [selectedRoute],
+  );
   const mapRef = useRef<MapRef>(null);
   const [baseMap, setBaseMap] = useState<BaseMapId>(defaultMetroBaseMap);
   const [hoveredTown, setHoveredTown] = useState<Town | null>(null);
   const [selectedTown, setSelectedTown] = useState<Town | null>(null);
-  const [hoveredCollaboration, setHoveredCollaboration] = useState<string | null>(null);
-  const [collaborationPointer, setCollaborationPointer] = useState({ x: 0, y: 0 });
   const selectedStyle = useMemo(() => baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style, [baseMap]);
-
-  const collaborationGeoJson = useMemo(() => ({
-    type: 'FeatureCollection' as const,
-    features: industryCollaborations.map((collaboration) => {
-      const from = townsData[collaboration.from];
-      const to = townsData[collaboration.to];
-      return {
-        type: 'Feature' as const,
-        properties: { label: collaboration.label, from: collaboration.from, to: collaboration.to },
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: [
-            [from.mapCenter.longitude, from.mapCenter.latitude],
-            [to.mapCenter.longitude, to.mapCenter.latitude],
-          ],
-        },
-      };
-    }),
-  }), []);
 
   const visitTown = useCallback((index: number) => {
     const town = towns[index];
@@ -67,7 +51,7 @@ export default function MetroOverviewView() {
       duration: prefersReducedMotion() ? 0 : 1000,
       essential: false,
     });
-  }, []);
+  }, [towns]);
 
   const tour = useAutoTour({ itemCount: towns.length, onVisit: visitTown, intervalMs: 6000 });
 
@@ -79,13 +63,6 @@ export default function MetroOverviewView() {
       return;
     }
     tour.visit(towns.findIndex((item) => item.id === town.id));
-  };
-
-  const handleMapMouseMove = (event: MapLayerMouseEvent) => {
-    const collaboration = event.features?.find((feature) => feature.layer.id === collaborationLayerId);
-    const label = collaboration?.properties?.label;
-    setHoveredCollaboration(typeof label === 'string' ? label : null);
-    setCollaborationPointer(event.point);
   };
 
   const activeTown = hoveredTown ?? selectedTown;
@@ -101,9 +78,6 @@ export default function MetroOverviewView() {
         mapStyle={selectedStyle}
         attributionControl={false}
         className="absolute inset-0"
-        interactiveLayerIds={[collaborationLayerId]}
-        onMouseMove={handleMapMouseMove}
-        onMouseLeave={() => setHoveredCollaboration(null)}
         onClick={() => tour.pauseForUser()}
         onDragStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
         onZoomStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
@@ -111,25 +85,14 @@ export default function MetroOverviewView() {
         onPitchStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
         onTouchStart={() => tour.pauseForUser()}
       >
-        <Source id="industry-collaborations-source" type="geojson" data={collaborationGeoJson}>
-          <Layer
-            id={collaborationLayerId}
-            type="line"
-            paint={{
-              'line-color': '#67e8f9',
-              'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.5, 11, 3],
-              'line-opacity': 0.7,
-              'line-dasharray': [2, 2],
-            }}
-          />
-        </Source>
         {metroCities.map((city) => (
           <Marker key={city.name} longitude={city.longitude} latitude={city.latitude} anchor="center">
             <span className="pointer-events-none text-sm font-semibold tracking-[0.18em] text-white/55 drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)]">{city.name}</span>
           </Marker>
         ))}
-        {towns.map((town) => {
+        {allTowns.map((town) => {
           const isSelected = selectedTown?.id === town.id;
+          const isOnRoute = !selectedRoute || selectedRoute.townIds.includes(town.id);
           return (
             <Marker
               key={town.id}
@@ -147,7 +110,7 @@ export default function MetroOverviewView() {
                 onBlur={() => setHoveredTown(null)}
                 aria-label={`${town.name}，${isSelected ? '再次点击进入企业目录' : '点击选中并定位'}`}
                 aria-pressed={isSelected}
-                className="group relative flex cursor-pointer flex-col items-center focus-visible:outline-none"
+                className={`group relative flex cursor-pointer flex-col items-center focus-visible:outline-none ${isOnRoute ? 'opacity-100' : 'opacity-35'}`}
               >
                 <span className={`pointer-events-none absolute bottom-3 w-5 rounded-full opacity-70 blur-md transition-all ${isSelected ? 'h-24' : 'h-16 group-hover:h-24 group-focus-visible:h-24'}`} style={{ backgroundColor: town.color }} />
                 <span className={`pointer-events-none relative grid h-10 w-10 place-items-center rounded-full border-2 bg-[#07111c]/90 shadow-[0_0_22px_currentColor] transition-transform ${isSelected ? 'scale-110 border-white' : 'border-white/80 group-hover:scale-110 group-focus-visible:scale-110'}`} style={{ color: town.color }}>
@@ -162,16 +125,6 @@ export default function MetroOverviewView() {
       </Map>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#07111c]/65 via-transparent to-[#07111c]/45" />
 
-      {hoveredCollaboration && (
-        <div
-          role="status"
-          className="pointer-events-none absolute z-30 max-w-64 rounded border border-cyan-100/25 bg-[#07111c]/95 px-3 py-2 text-xs text-cyan-50 shadow-xl"
-          style={{ left: collaborationPointer.x + 14, top: collaborationPointer.y + 14 }}
-        >
-          {hoveredCollaboration}
-        </div>
-      )}
-
       <header className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3 sm:left-6 sm:right-6">
         <div className="flex min-w-0 items-start gap-3">
           <button type="button" onClick={() => navigate('/')} aria-label="返回首页" title="返回首页" className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-white/20 bg-[#07111c]/90 backdrop-blur hover:bg-white/10"><ArrowLeft className="h-5 w-5" /></button>
@@ -184,6 +137,7 @@ export default function MetroOverviewView() {
       </header>
 
       <aside className="absolute bottom-20 left-4 z-20 w-[min(23rem,calc(100vw-2rem))] border border-white/15 bg-[#07111c]/90 p-4 shadow-2xl backdrop-blur lg:bottom-6 lg:left-6" aria-live="polite">
+        {selectedRoute && <p className="mb-3 border-b border-white/10 pb-3 text-xs leading-5 text-cyan-100">主题路线：{selectedRoute.name}<span className="mt-1 block text-white/55">{selectedRoute.description}</span></p>}
         {activeTown ? (
           <>
             <p className="text-xs tracking-[0.16em]" style={{ color: activeTown.color }}>{activeTown.metroCity} · 产业节点</p>
