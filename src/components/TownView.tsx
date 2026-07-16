@@ -38,14 +38,6 @@ function optionCounts(items: Enterprise[], getValue: (enterprise: Enterprise) =>
   }, {});
 }
 
-function enterpriseShortName(name: string) {
-  const shortened = name
-    .replace(/（[^）]+）/g, '')
-    .replace(/有限责任公司|股份有限公司|有限公司|科技/g, '')
-    .trim();
-  return shortened.length > 8 ? `${shortened.slice(0, 8)}…` : shortened || name;
-}
-
 function DetailSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
     <section className="border-t border-white/10 pt-5">
@@ -349,29 +341,55 @@ export default function TownView() {
                     <motion.div
                       layout
                       key={enterprise.id}
-                      transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-                      className="relative min-w-[560px] flex-1 overflow-hidden rounded-md border border-cyan-200/30 bg-[#0b111b]/95 shadow-[0_0_30px_rgba(103,232,249,0.08)]"
+                      transition={{ layout: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }}
+                      className="relative min-w-[560px] flex-1 snap-center overflow-hidden rounded-3xl border border-cyan-200/30 bg-[#0b111b]/95 shadow-[0_0_32px_rgba(164,244,253,0.1)] backdrop-blur-md"
                     >
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.42, delay: 0.16 }}
+                        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-200/[0.07] to-transparent"
+                      />
                       <ComparisonToggle enterprise={enterprise} checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="absolute right-4 top-4 z-10" />
-                      <EnterpriseDetail enterprise={enterprise} />
+                      <motion.div
+                        initial={{ opacity: 0, x: 18 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.48, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative h-full"
+                      >
+                        <EnterpriseDetail enterprise={enterprise} />
+                      </motion.div>
                     </motion.div>
                   ) : (
                     <motion.div
                       layout
                       key={enterprise.id}
-                      transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-                      className="group relative w-28 shrink-0 overflow-hidden rounded-md border border-white/10 bg-[#101722]/80 transition-colors hover:border-white/25 hover:bg-white/[0.07]"
+                      transition={{ layout: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }}
+                      className="group relative w-16 shrink-0 snap-center overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] shadow-lg backdrop-blur-md transition-[width,background-color,border-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:w-20 hover:border-cyan-200/25 hover:bg-white/[0.08] xl:w-20 xl:hover:w-24"
                     >
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-200/[0.05] to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                       <button
                         type="button"
                         onClick={() => setSelectedId(enterprise.id)}
-                        className="flex h-full w-full flex-col items-start p-4 pb-14 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
+                        className="relative flex h-full w-full flex-col items-center justify-start pb-14 pt-8 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
                         aria-label={`展开${enterprise.name}`}
                       >
-                        <span className="text-xs tabular-nums text-white/35">{String(index + 1).padStart(2, '0')}</span>
-                        <span className="mt-5 h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(164,244,253,0.65)]" />
-                        <strong className="mt-4 line-clamp-3 text-sm font-semibold leading-6 text-white/85">{enterpriseShortName(enterprise.name)}</strong>
-                        <span className="mt-3 line-clamp-3 text-[11px] leading-5 text-white/40">{enterprise.primaryIndustry}</span>
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-200/80 shadow-[0_0_8px_rgba(164,244,253,0.8)] transition-[box-shadow,transform] duration-500 group-hover:scale-125 group-hover:shadow-[0_0_14px_rgba(164,244,253,0.95)]" />
+                        <span className="mt-3 text-[10px] tabular-nums text-white/30">{String(index + 1).padStart(2, '0')}</span>
+                        <span
+                          className="relative mt-5 flex min-h-0 w-full flex-1 justify-center overflow-hidden pb-3"
+                          style={{
+                            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
+                            maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
+                          }}
+                        >
+                          <strong
+                            className="whitespace-nowrap text-base font-medium text-white/90 transition-colors duration-300 group-hover:text-white"
+                            style={{ writingMode: 'vertical-rl', letterSpacing: '0.14em' }}
+                          >
+                            {enterprise.name}
+                          </strong>
+                        </span>
                       </button>
                       <ComparisonToggle enterprise={enterprise} checked={isCompared} disabled={comparisonFull} onChange={() => toggleComparison(enterprise.id)} className="absolute bottom-3 left-1/2 -translate-x-1/2" />
                     </motion.div>
