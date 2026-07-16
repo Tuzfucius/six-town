@@ -53,6 +53,7 @@ export default function MetroOverviewView() {
   const [selectedTown, setSelectedTown] = useState<Town | null>(null);
   const intro = useMetroIntro({ enabled: wantsIntro, reduceMotion });
   const markersVisible = ['globe', 'revealing', 'ready'].includes(intro.stage);
+  const uiRevealTransition = { duration: reduceMotion ? 0 : 0.62, ease: [0.16, 1, 0.3, 1] as const };
   const { layouts, recalculate } = useTownCardLayout(mapRef, allTowns, selectedTown?.id ?? null, markersVisible);
   const selectedStyle = useMemo(
     () => baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style,
@@ -231,18 +232,26 @@ export default function MetroOverviewView() {
       </Map>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#07111c]/55 via-transparent to-[#07111c]/45" />
 
-      <header className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3 sm:left-6 sm:right-6">
-        <div className="flex min-w-0 items-start gap-3">
-          <button type="button" onClick={() => navigate('/')} aria-label="返回首页" title="返回首页" className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-white/20 bg-[#07111c]/90 backdrop-blur hover:bg-white/10"><ArrowLeft className="h-5 w-5" /></button>
-          {intro.isInteractive && <div className="hidden border-l border-white/20 pl-3 sm:block"><p className="text-xs text-cyan-100/70">都市圈总览</p><h1 className="mt-1 text-lg font-semibold">六镇之间，看见新质生产力</h1></div>}
-        </div>
+      <AnimatePresence>
         {intro.isInteractive && (
-          <div className="flex items-center gap-1 rounded-md border border-white/15 bg-[#07111c]/90 p-1 backdrop-blur" aria-label="底图切换">
-            <Layers className="ml-1 hidden h-4 w-4 text-cyan-100/70 sm:block" aria-hidden="true" />
-            {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => { tour.pauseForUser(); setBaseMap(item.id); }} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.label}</button>)}
-          </div>
+          <motion.header
+            initial={reduceMotion ? false : { opacity: 0, y: -12, filter: 'blur(6px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+            transition={uiRevealTransition}
+            className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3 sm:left-6 sm:right-6"
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <button type="button" onClick={() => navigate('/')} aria-label="返回首页" title="返回首页" className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-white/20 bg-[#07111c]/90 backdrop-blur hover:bg-white/10"><ArrowLeft className="h-5 w-5" /></button>
+              <div className="hidden border-l border-white/20 pl-3 sm:block"><p className="text-xs text-cyan-100/70">都市圈总览</p><h1 className="mt-1 text-lg font-semibold">六镇之间，看见新质生产力</h1></div>
+            </div>
+            <div className="flex items-center gap-1 rounded-md border border-white/15 bg-[#07111c]/90 p-1 backdrop-blur" aria-label="底图切换">
+              <Layers className="ml-1 hidden h-4 w-4 text-cyan-100/70 sm:block" aria-hidden="true" />
+              {baseMaps.map((item) => <button key={item.id} type="button" onClick={() => { tour.pauseForUser(); setBaseMap(item.id); }} title={`切换至${item.label}`} aria-pressed={baseMap === item.id} className={`h-8 rounded px-2 text-xs transition-colors ${baseMap === item.id ? 'bg-cyan-200/20 text-cyan-100' : 'text-white/65 hover:bg-white/10'}`}>{item.label}</button>)}
+            </div>
+          </motion.header>
         )}
-      </header>
+      </AnimatePresence>
 
       <AnimatePresence>
         {intro.isIntroActive && (
@@ -258,7 +267,13 @@ export default function MetroOverviewView() {
 
       {intro.isInteractive && (
         <>
-          <aside className="absolute bottom-20 left-4 z-20 w-[min(23rem,calc(100vw-2rem))] border border-white/15 bg-[#07111c]/90 p-4 shadow-2xl backdrop-blur lg:bottom-6 lg:left-6" aria-live="polite">
+          <motion.aside
+            initial={reduceMotion ? false : { opacity: 0, x: -16, filter: 'blur(6px)' }}
+            animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+            transition={{ ...uiRevealTransition, delay: reduceMotion ? 0 : 0.12 }}
+            className="absolute bottom-20 left-4 z-20 w-[min(23rem,calc(100vw-2rem))] border border-white/15 bg-[#07111c]/90 p-4 shadow-2xl backdrop-blur lg:bottom-6 lg:left-6"
+            aria-live="polite"
+          >
             {selectedRoute && <p className="mb-3 border-b border-white/10 pb-3 text-xs leading-5 text-cyan-100">主题路线：{selectedRoute.name}<span className="mt-1 block text-white/55">{selectedRoute.description}</span></p>}
             {activeTown ? (
               <>
@@ -272,9 +287,16 @@ export default function MetroOverviewView() {
             ) : (
               <><p className="text-xs text-cyan-100/70">六镇都市圈</p><h2 className="mt-1 text-base font-semibold">选择小镇，查看产业节点</h2><p className="mt-2 text-sm leading-6 text-white/65">首次点击定位并固定信息，再次点击进入对应小镇的企业资料。</p></>
             )}
-          </aside>
+          </motion.aside>
 
-          <AutoTourControls className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 lg:bottom-6 lg:left-auto lg:right-16 lg:translate-x-0" status={tour.status} currentIndex={tour.currentIndex} itemCount={towns.length} itemLabel="小镇" onPlay={tour.play} onPause={tour.pause} onPrevious={tour.previous} onNext={tour.next} onStop={tour.stop} />
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 12, filter: 'blur(6px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ ...uiRevealTransition, delay: reduceMotion ? 0 : 0.2 }}
+            className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 lg:bottom-6 lg:left-auto lg:right-16 lg:translate-x-0"
+          >
+            <AutoTourControls status={tour.status} currentIndex={tour.currentIndex} itemCount={towns.length} itemLabel="小镇" onPlay={tour.play} onPause={tour.pause} onPrevious={tour.previous} onNext={tour.next} onStop={tour.stop} />
+          </motion.div>
         </>
       )}
     </main>
