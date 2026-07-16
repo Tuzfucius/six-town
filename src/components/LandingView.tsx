@@ -183,7 +183,7 @@ export default function LandingView() {
                         </motion.button>
                       ))}
                     </div>
-                  : <div className="grid w-full gap-3 px-4 md:grid-cols-3">
+                  : <div className="grid w-full gap-3 px-4 sm:grid-cols-2 xl:grid-cols-4">
                       {explorationRoutes.map((route, index) => (
                         <motion.button
                           type="button"
@@ -213,18 +213,34 @@ export default function LandingView() {
                           </span>
                         </motion.button>
                       ))}
+                      <motion.button
+                        type="button"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, delay: explorationRoutes.length * 0.08 }}
+                        onClick={() => navigate('/industry-chain')}
+                        className="group min-h-64 rounded-lg border border-white/15 bg-black/30 p-5 text-left backdrop-blur-md transition-colors hover:border-cyan-200/50 hover:bg-cyan-200/[0.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
+                      >
+                        <span className="mb-6 grid h-10 w-10 place-items-center rounded-md bg-cyan-200/10 text-cyan-100">
+                          <Boxes className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <h3 className="text-xl font-semibold text-white">产业链视图</h3>
+                        <p className="mt-3 min-h-12 text-sm leading-relaxed text-white/60">
+                          按上游基础设施、中游技术与产品、下游应用浏览六镇企业。
+                        </p>
+                        <div className="mt-5 flex flex-wrap gap-1.5 text-xs text-white/55">
+                          <span>上游基础</span>
+                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                          <span>中游技术</span>
+                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                          <span>下游应用</span>
+                        </div>
+                        <span className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-cyan-100/80">
+                          进入产业链视图
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                        </span>
+                      </motion.button>
                     </div>}
-
-                <div className="mt-4 flex w-full flex-wrap justify-center gap-2 px-4">
-                  <button type="button" onClick={() => navigate('/metro')} className="flex h-10 items-center gap-2 rounded-md border border-cyan-200/40 bg-cyan-200/10 px-3 text-sm font-medium text-cyan-100 hover:bg-cyan-200/20">
-                    <Map className="h-4 w-4" aria-hidden="true" />
-                    都市圈总览
-                  </button>
-                  <button type="button" onClick={() => navigate('/industry-chain')} className="flex h-10 items-center gap-2 rounded-md border border-white/20 bg-white/[0.06] px-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white">
-                    <Boxes className="h-4 w-4" aria-hidden="true" />
-                    产业链视图
-                  </button>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
