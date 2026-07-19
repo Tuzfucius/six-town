@@ -7,3 +7,5 @@ coverage/
 *.log
 .env*
 !.env.example
+.dify.local.json
+.dify.local.json.tmp
