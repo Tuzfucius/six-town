@@ -1,13 +1,20 @@
 import 'dotenv/config';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import path from 'node:path';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
-const difyBaseUrl = (process.env.DIFY_API_BASE_URL ?? '').replace(/\/+$/, '');
-const difyApiKey = process.env.DIFY_API_KEY;
+const localConfigPath = path.resolve(process.cwd(), '.dify.local.json');
+let difyBaseUrl = (process.env.DIFY_API_BASE_URL ?? '').replace(/\/+$/, '');
+let difyApiKey = (process.env.DIFY_API_KEY ?? '').trim();
 const requestBuckets = new Map<string, { count: number; resetAt: number }>();
+
+type StoredDifyConfig = {
+  baseUrl: string;
+  apiKey: string;
+};
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '8kb' }));
@@ -32,11 +39,82 @@ function validText(value: unknown, maxLength: number) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength;
 }
 
+function normalizeBaseUrl(value: string) {
+  const trimmedValue = value.trim().replace(/\/+$/, '');
+  try {
+    const parsed = new URL(trimmedValue);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? trimmedValue : '';
+  } catch {
+    return '';
+  }
+}
+
+function isLocalConfigurationRequest(request: Request) {
+  const address = request.ip || request.socket.remoteAddress || '';
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
+}
+
+function allowLocalConfiguration(request: Request, response: Response) {
+  if (isLocalConfigurationRequest(request)) return true;
+  response.status(403).json({ error: '配置界面仅允许在本机访问。' });
+  return false;
+}
+
+async function loadLocalDifyConfig() {
+  try {
+    const rawConfig = await readFile(localConfigPath, 'utf8');
+    const savedConfig = JSON.parse(rawConfig) as Partial<StoredDifyConfig>;
+    const savedBaseUrl = typeof savedConfig.baseUrl === 'string' ? normalizeBaseUrl(savedConfig.baseUrl) : '';
+    const savedApiKey = typeof savedConfig.apiKey === 'string' ? savedConfig.apiKey.trim() : '';
+    if (savedBaseUrl && savedApiKey) {
+      difyBaseUrl = savedBaseUrl;
+      difyApiKey = savedApiKey;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.warn('未能读取本地 Dify 配置，将使用环境变量。');
+    }
+  }
+}
+
+async function saveLocalDifyConfig(config: StoredDifyConfig) {
+  const temporaryPath = `${localConfigPath}.tmp`;
+  await writeFile(temporaryPath, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await rename(temporaryPath, localConfigPath);
+}
+
 function hasDifyConfiguration(response: Response) {
   if (difyBaseUrl && difyApiKey) return true;
   response.status(503).json({ error: '智能问答服务尚未配置。' });
   return false;
 }
+
+app.get('/api/chat/config', (request, response) => {
+  if (!allowLocalConfiguration(request, response)) return;
+  response.status(200).json({
+    baseUrl: difyBaseUrl,
+    hasApiKey: Boolean(difyApiKey),
+    isConfigured: Boolean(difyBaseUrl && difyApiKey),
+  });
+});
+
+app.put('/api/chat/config', async (request, response) => {
+  if (!allowLocalConfiguration(request, response)) return;
+  const { baseUrl, apiKey } = request.body as Record<string, unknown>;
+  const normalizedBaseUrl = typeof baseUrl === 'string' ? normalizeBaseUrl(baseUrl) : '';
+  const nextApiKey = typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : difyApiKey;
+  if (!normalizedBaseUrl || !validText(nextApiKey, 512)) {
+    return response.status(400).json({ error: '请填写有效的 Dify URL 和 API Key。' });
+  }
+  try {
+    await saveLocalDifyConfig({ baseUrl: normalizedBaseUrl, apiKey: nextApiKey });
+    difyBaseUrl = normalizedBaseUrl;
+    difyApiKey = nextApiKey;
+    response.status(200).json({ baseUrl: difyBaseUrl, hasApiKey: true, isConfigured: true });
+  } catch {
+    response.status(500).json({ error: '本地配置保存失败。' });
+  }
+});
 
 app.post('/api/chat/messages', async (request, response) => {
   if (!hasDifyConfiguration(response)) return;
@@ -101,4 +179,6 @@ const distDirectory = path.resolve(process.cwd(), 'dist');
 app.use(express.static(distDirectory));
 app.get('*', (_request, response) => response.sendFile(path.join(distDirectory, 'index.html')));
 
-app.listen(port, () => console.log(`六镇地图服务已启动：http://localhost:${port}`));
+void loadLocalDifyConfig().finally(() => {
+  app.listen(port, () => console.log(`六镇地图服务已启动：http://localhost:${port}`));
+});

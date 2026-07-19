@@ -4,6 +4,12 @@ export type ChatMessage = {
   content: string;
 };
 
+export type ChatConfigStatus = {
+  baseUrl: string;
+  hasApiKey: boolean;
+  isConfigured: boolean;
+};
+
 type SendMessageInput = {
   query: string;
   conversationId?: string;
@@ -81,4 +87,22 @@ export async function stopChatMessage(taskId: string, userId: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
   });
+}
+
+async function readConfigResponse(response: Response) {
+  const payload = await response.json() as ChatConfigStatus & { error?: string };
+  if (!response.ok) throw new Error(payload.error || '读取配置失败。');
+  return payload;
+}
+
+export async function getChatConfig() {
+  return readConfigResponse(await fetch('/api/chat/config'));
+}
+
+export async function saveChatConfig(baseUrl: string, apiKey: string) {
+  return readConfigResponse(await fetch('/api/chat/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ baseUrl, apiKey }),
+  }));
 }

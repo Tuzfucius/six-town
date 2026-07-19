@@ -1,8 +1,8 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { MessageCircle, Plus, Send, Sparkles, Square, X } from 'lucide-react';
+import { MessageCircle, Plus, Save, Send, Settings, Sparkles, Square, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { type ChatMessage, sendChatMessage, stopChatMessage } from '../services/difyChat';
+import { getChatConfig, saveChatConfig, type ChatConfigStatus, type ChatMessage, sendChatMessage, stopChatMessage } from '../services/difyChat';
 
 const STORAGE_KEYS = {
   userId: 'six-town-chat-user-id',
@@ -42,6 +42,13 @@ export default function ChatWidget() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isLauncherVisible, setIsLauncherVisible] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [configUrl, setConfigUrl] = useState('');
+  const [configApiKey, setConfigApiKey] = useState('');
+  const [configStatus, setConfigStatus] = useState<ChatConfigStatus | null>(null);
+  const [isConfigSaving, setIsConfigSaving] = useState(false);
+  const [configError, setConfigError] = useState('');
+  const [configNotice, setConfigNotice] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
@@ -78,6 +85,40 @@ export default function ChatWidget() {
     window.localStorage.removeItem(STORAGE_KEYS.messages);
     setMessages([]);
     setError('');
+  };
+
+  const loadConfiguration = async () => {
+    setConfigError('');
+    setConfigNotice('');
+    try {
+      const status = await getChatConfig();
+      setConfigStatus(status);
+      setConfigUrl(status.baseUrl);
+    } catch (caught) {
+      setConfigError(caught instanceof Error ? caught.message : '读取配置失败。');
+    }
+  };
+
+  const openSettings = () => {
+    setIsSettingsOpen(true);
+    void loadConfiguration();
+  };
+
+  const saveConfiguration = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsConfigSaving(true);
+    setConfigError('');
+    setConfigNotice('');
+    try {
+      const status = await saveChatConfig(configUrl, configApiKey);
+      setConfigStatus(status);
+      setConfigApiKey('');
+      setConfigNotice('配置已保存，后续问答将使用新的 Dify 服务。');
+    } catch (caught) {
+      setConfigError(caught instanceof Error ? caught.message : '保存配置失败。');
+    } finally {
+      setIsConfigSaving(false);
+    }
   };
 
   const sendMessage = async (value: string) => {
@@ -163,12 +204,34 @@ export default function ChatWidget() {
               <h2 id="chat-title" className="text-sm font-semibold text-white">六镇智能问答</h2>
             </div>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={openSettings} title="Dify 配置" aria-label="Dify 配置" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-[#0b111c]/65 text-white/60 backdrop-blur-md transition-colors hover:border-cyan-100/35 hover:bg-cyan-200/10 hover:text-cyan-50"><Settings className="h-4 w-4" aria-hidden="true" /></button>
               <button type="button" onClick={createConversation} disabled={isStreaming} title="新建会话" aria-label="新建会话" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-[#0b111c]/65 text-white/60 backdrop-blur-md transition-colors hover:border-cyan-100/35 hover:bg-cyan-200/10 hover:text-cyan-50 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" aria-hidden="true" /></button>
               <button type="button" onClick={() => setIsOpen(false)} title="关闭问答窗口" aria-label="关闭问答窗口" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-[#0b111c]/65 text-white/60 backdrop-blur-md transition-colors hover:border-cyan-100/35 hover:bg-cyan-200/10 hover:text-cyan-50"><X className="h-4 w-4" aria-hidden="true" /></button>
             </div>
           </header>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5">
+            {isSettingsOpen ? <form onSubmit={saveConfiguration} className="space-y-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Dify 服务配置</h3>
+                  <p className="mt-1 text-xs leading-5 text-white/55">密钥仅提交给本机服务并保存于 Git 忽略的本地配置文件，不会回显或写入浏览器存储。</p>
+                </div>
+                <button type="button" onClick={() => setIsSettingsOpen(false)} title="返回对话" aria-label="返回对话" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-[#0b111c]/65 text-white/60 backdrop-blur-md transition-colors hover:border-cyan-100/35 hover:bg-cyan-200/10 hover:text-cyan-50"><X className="h-4 w-4" aria-hidden="true" /></button>
+              </div>
+              <label className="block space-y-2 text-xs text-white/70" htmlFor="dify-base-url">
+                <span>Dify 基础 URL</span>
+                <input id="dify-base-url" type="url" value={configUrl} onChange={(event) => setConfigUrl(event.target.value)} required placeholder="http://localhost/v1" className="h-10 w-full rounded-lg border border-white/15 bg-[#07111c]/75 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-200/60" />
+              </label>
+              <label className="block space-y-2 text-xs text-white/70" htmlFor="dify-api-key">
+                <span>Dify API Key {configStatus?.hasApiKey ? '（留空则保留当前密钥）' : ''}</span>
+                <input id="dify-api-key" type="password" value={configApiKey} onChange={(event) => setConfigApiKey(event.target.value)} required={!configStatus?.hasApiKey} autoComplete="new-password" placeholder={configStatus?.hasApiKey ? '已配置，不会显示' : 'app-...'} className="h-10 w-full rounded-lg border border-white/15 bg-[#07111c]/75 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-200/60" />
+              </label>
+              {configStatus && <p className={`rounded-lg border px-3 py-2 text-xs ${configStatus.isConfigured ? 'border-cyan-200/25 bg-cyan-200/10 text-cyan-50/85' : 'border-white/10 bg-white/[0.04] text-white/55'}`}>{configStatus.isConfigured ? 'Dify 服务已配置。' : '尚未完成 Dify 服务配置。'}</p>}
+              {configError && <p role="alert" className="rounded-lg border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">{configError}</p>}
+              {configNotice && <p className="rounded-lg border border-cyan-200/25 bg-cyan-200/10 px-3 py-2 text-xs leading-5 text-cyan-50/85">{configNotice}</p>}
+              <button type="submit" disabled={isConfigSaving} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-cyan-100/60 bg-cyan-200/80 px-4 text-sm font-medium text-[#07111c] backdrop-blur-md transition-colors hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-45"><Save className="h-4 w-4" aria-hidden="true" />{isConfigSaving ? '正在保存' : '保存配置'}</button>
+            </form> : <>
             {messages.length === 0 && (
               <div className="space-y-4">
                 <p className="max-w-[30ch] text-sm leading-6 text-white/75">围绕六镇企业、产业与政策资料提问，我会从已接入的知识库中检索回答。</p>
@@ -186,15 +249,16 @@ export default function ChatWidget() {
             ))}
             {error && <p role="alert" className="rounded-lg border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100 backdrop-blur-md">{error}</p>}
             <div ref={messageEndRef} />
+            </>}
           </div>
 
-          <form onSubmit={submit} className="shrink-0 border-t border-white/10 p-3">
+          {!isSettingsOpen && <form onSubmit={submit} className="shrink-0 border-t border-white/10 p-3">
             <div className="flex items-end gap-2 rounded-lg border border-white/15 bg-[#07111c]/75 px-3 py-2 backdrop-blur-md focus-within:border-cyan-200/60">
               <label className="sr-only" htmlFor="chat-message">输入问题</label>
               <textarea ref={textareaRef} id="chat-message" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleInputKeyDown} disabled={isStreaming} rows={2} maxLength={2000} placeholder="输入有关企业或政策的问题" className="min-h-10 flex-1 resize-none bg-transparent py-1 text-sm leading-5 text-white outline-none placeholder:text-white/35 disabled:opacity-50" />
               {isStreaming ? <button type="button" onClick={stopStreaming} title="停止生成" aria-label="停止生成" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-amber-100/60 bg-amber-200/80 text-[#07111c] backdrop-blur-md transition-colors hover:bg-amber-100"><Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" /></button> : <button type="submit" disabled={!input.trim()} title="发送问题" aria-label="发送问题" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-cyan-100/65 bg-cyan-200/80 text-[#07111c] backdrop-blur-md transition-colors hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-35"><Send className="h-4 w-4" aria-hidden="true" /></button>}
             </div>
-          </form>
+          </form>}
         </motion.div>
       )}
       </AnimatePresence>

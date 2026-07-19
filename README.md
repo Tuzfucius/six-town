@@ -51,16 +51,18 @@ npm run build
 
 ## Dify 智能问答
 
-聊天功能通过本项目的 Express 代理调用 Dify Chatflow，Dify API Key 仅保存在本地 `.env` 或部署平台的环境变量中，不会进入浏览器构建产物或 Git 仓库。
+聊天功能通过本项目的 Express 代理调用 Dify Chatflow。点击聊天窗口标题栏的齿轮按钮可在本机配置 Dify 基础 URL 和 API Key；密钥只会发送给本机 Express 服务，并保存到 Git 忽略的 `.dify.local.json`，不会回显、写入浏览器存储或进入构建产物、Git 仓库。
+
+配置接口仅允许 `localhost` 访问。面向公网部署时，请使用环境变量配置 Dify 服务，不要开放本地配置入口给外部用户。
 
 ```powershell
 Copy-Item .env.example .env
-# 在 .env 中填写 DIFY_API_KEY；不要将 .env 提交到 Git。
+# 可选：在 .env 中预设 DIFY_API_BASE_URL 与 DIFY_API_KEY；不要将 .env 提交到 Git。
 npm run server
 npm run dev
 ```
 
-开发环境中，Vite 的 `/api` 请求会代理到 `http://localhost:3001`。生产环境先构建，再通过下列方式由 Express 托管静态文件和 API：
+启动后访问聊天窗口中的“Dify 配置”按钮填写服务地址和 API Key。开发环境中，Vite 的 `/api` 请求会代理到 `http://localhost:3001`。生产环境先构建，再通过下列方式由 Express 托管静态文件和 API：
 
 ```powershell
 npm run build
