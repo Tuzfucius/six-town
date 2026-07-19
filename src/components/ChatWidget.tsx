@@ -1,6 +1,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { MessageCircle, Plus, Send, Sparkles, Square, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { type ChatMessage, sendChatMessage, stopChatMessage } from '../services/difyChat';
 
 const STORAGE_KEYS = {
@@ -40,6 +41,7 @@ function loadMessages() {
 export default function ChatWidget() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLauncherVisible, setIsLauncherVisible] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
@@ -51,6 +53,8 @@ export default function ChatWidget() {
   const userIdRef = useRef(getUserId());
   const conversationIdRef = useRef(window.localStorage.getItem(STORAGE_KEYS.conversationId));
   const isMapView = location.pathname === '/metro' || location.pathname.endsWith('/map');
+  const reduceMotion = useReducedMotion();
+  const dialogTransition = { duration: reduceMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] as const };
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(messages));
@@ -141,8 +145,18 @@ export default function ChatWidget() {
 
   return (
     <section className={`fixed right-4 z-[60] sm:right-6 ${isMapView ? 'bottom-32 sm:bottom-36' : 'bottom-4 sm:bottom-6'}`} aria-label="智能问答">
+      <AnimatePresence onExitComplete={() => setIsLauncherVisible(true)}>
       {isOpen && (
-        <div role="dialog" aria-modal="false" aria-labelledby="chat-title" className={`absolute right-0 flex h-[80dvh] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-xl border border-cyan-100/25 bg-[#0b111c]/86 shadow-[0_24px_70px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:bottom-16 sm:h-[min(680px,calc(100vh-7rem))] sm:w-[400px] ${isMapView ? 'bottom-8' : 'bottom-14'}`}>
+        <motion.div
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="chat-title"
+          initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0, y: 12, scale: 0.97 }}
+          transition={dialogTransition}
+          className={`absolute right-0 flex h-[80dvh] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-xl border border-cyan-100/25 bg-[#0b111c]/86 shadow-[0_24px_70px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:bottom-16 sm:h-[min(680px,calc(100vh-7rem))] sm:w-[400px] ${isMapView ? 'bottom-8' : 'bottom-14'}`}
+        >
           <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
             <div className="flex items-center gap-2.5">
               <span className="grid h-8 w-8 place-items-center rounded-lg border border-cyan-100/20 bg-cyan-200/10 text-cyan-100 backdrop-blur-md"><Sparkles className="h-4 w-4" aria-hidden="true" /></span>
@@ -181,11 +195,12 @@ export default function ChatWidget() {
               {isStreaming ? <button type="button" onClick={stopStreaming} title="停止生成" aria-label="停止生成" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-amber-100/60 bg-amber-200/80 text-[#07111c] backdrop-blur-md transition-colors hover:bg-amber-100"><Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" /></button> : <button type="submit" disabled={!input.trim()} title="发送问题" aria-label="发送问题" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-cyan-100/65 bg-cyan-200/80 text-[#07111c] backdrop-blur-md transition-colors hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-35"><Send className="h-4 w-4" aria-hidden="true" /></button>}
             </div>
           </form>
-        </div>
+        </motion.div>
       )}
-      {!isOpen && <button type="button" onClick={() => setIsOpen(true)} aria-expanded="false" aria-label="打开智能问答" title="智能问答" className="grid h-12 w-12 place-items-center rounded-full border border-cyan-100/40 bg-[#0b111c]/78 text-cyan-100 shadow-xl backdrop-blur-xl transition-colors hover:border-cyan-100/70 hover:bg-cyan-200/25 hover:text-cyan-50 sm:h-14 sm:w-14">
+      </AnimatePresence>
+      {!isOpen && isLauncherVisible && <motion.button type="button" onClick={() => { setIsLauncherVisible(false); setIsOpen(true); }} aria-expanded="false" aria-label="打开智能问答" title="智能问答" initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }} animate={{ opacity: 1, scale: 1 }} transition={dialogTransition} className="grid h-12 w-12 place-items-center rounded-full border border-cyan-100/40 bg-[#0b111c]/78 text-cyan-100 shadow-xl backdrop-blur-xl transition-colors hover:border-cyan-100/70 hover:bg-cyan-200/25 hover:text-cyan-50 sm:h-14 sm:w-14">
         <MessageCircle className="h-5 w-5" aria-hidden="true" />
-      </button>}
+      </motion.button>}
     </section>
   );
 }
