@@ -49,6 +49,25 @@ npm run lint
 npm run build
 ```
 
+## Dify 智能问答
+
+聊天功能通过本项目的 Express 代理调用 Dify Chatflow，Dify API Key 仅保存在本地 `.env` 或部署平台的环境变量中，不会进入浏览器构建产物或 Git 仓库。
+
+```powershell
+Copy-Item .env.example .env
+# 在 .env 中填写 DIFY_API_KEY；不要将 .env 提交到 Git。
+npm run server
+npm run dev
+```
+
+开发环境中，Vite 的 `/api` 请求会代理到 `http://localhost:3001`。生产环境先构建，再通过下列方式由 Express 托管静态文件和 API：
+
+```powershell
+npm run build
+$env:PORT=3000
+npm start
+```
+
 ## 目录结构
 
 ```text

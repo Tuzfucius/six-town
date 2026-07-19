@@ -10,6 +10,7 @@ import TownView from "./components/TownView";
 import TownMapView from "./components/TownMapView";
 import MetroOverviewView from "./components/MetroOverviewView";
 import IndustryChainView from "./components/IndustryChainView";
+import ChatWidget from "./components/ChatWidget";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -42,6 +43,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AnimatedRoutes />
+      <ChatWidget />
     </BrowserRouter>
   );
 }
