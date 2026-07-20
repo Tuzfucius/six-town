@@ -41,7 +41,7 @@ export const townsData: Record<string, Town> = {
   },
   ai: {
     id: 'ai', name: '人工智能小镇/未来科技城', subtitle: '前沿智能技术与成果转化', city: '杭州 · 余杭', color: '#a5b4fc', mapCenter: { longitude: 119.967, latitude: 30.264 },
-    description: '聚集人工智能、脑机接口、空间智能和医疗机器人等前沿技术方向，连接科研平台与产业化应用。', metroCity: '杭州', industryTags: ['人工智能', '成果转化', '空间智能'], representativeEnterpriseIds: ['AI-001', 'AI-002'], highlights: ['脑机接口', '空间智能', '医疗机器人'],
+    description: '聚集人工智能、脑机接口、空间智能和医疗机器人等前沿技术方向，连接科研平台与产业化应用。', metroCity: '杭州', industryTags: ['人工智能', '成果转化', '空间智能'], representativeEnterpriseIds: ['AI-001', 'AI-002', 'AI-005', 'AI-006'], highlights: ['脑机接口', '空间智能', '医疗机器人'],
   },
   computing: {
     id: 'computing', name: '中国（杭州）算力小镇', subtitle: '数算模用产业底座', city: '杭州 · 临平', color: '#fbbf24', mapCenter: { longitude: 120.25, latitude: 30.4 },
@@ -53,7 +53,7 @@ export const townsData: Record<string, Town> = {
   },
   yuecheng: {
     id: 'yuecheng', name: '越城集成电路小镇', subtitle: '集成电路制造与封装测试', city: '绍兴 · 越城', color: '#38bdf8', mapCenter: { longitude: 120.5833, latitude: 30.05 },
-    description: '围绕晶圆制造、MEMS、功率器件、图像传感器与先进封装，呈现制造型产业链的关键能力。', metroCity: '绍兴', industryTags: ['集成电路', 'MEMS', '先进封装'], representativeEnterpriseIds: ['SX-001', 'SX-004'], highlights: ['晶圆制造', '功率器件', '图像传感器'],
+    description: '围绕晶圆制造、MEMS、功率器件、图像传感器与先进封装，呈现制造型产业链的关键能力。', metroCity: '绍兴', industryTags: ['集成电路', 'MEMS', '先进封装'], representativeEnterpriseIds: ['SX-001', 'SX-004', 'SX-006', 'SX-007'], highlights: ['晶圆制造', '功率器件', '图像传感器'],
   },
   jiashan: {
     id: 'jiashan', name: '嘉善归谷智造小镇', subtitle: '交叉技术与高端装备', city: '嘉兴 · 嘉善', color: '#f472b6', mapCenter: { longitude: 120.92, latitude: 30.84 },
