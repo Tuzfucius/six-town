@@ -37,10 +37,19 @@
 
 ```powershell
 npm install
+npm run dev:all
+```
+
+一键启动会同时运行 Vite 前端（`http://localhost:3000`）和 Express 后端（`http://localhost:3001`）。前端的 `/api` 请求依赖后端服务；如果只运行 `npm run dev`，聊天请求会因后端未监听而出现 `ECONNREFUSED`。
+
+如需分别启动服务，可在两个终端中运行：
+
+```powershell
+npm run server
 npm run dev
 ```
 
-开发服务器默认监听 `http://localhost:3000`。
+启动脚本不会自动终止占用 `3000` 或 `3001` 端口的其他进程，也不会自动切换端口。后端端口可通过 `PORT` 设置；设置后，一键启动会同步更新 Vite 的本地代理目标。
 
 提交前执行：
 
