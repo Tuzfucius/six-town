@@ -2,6 +2,7 @@ export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  thought?: string;
 };
 
 export type ChatConfigStatus = {
@@ -16,6 +17,7 @@ type SendMessageInput = {
   userId: string;
   signal: AbortSignal;
   onMessage: (answer: string) => void;
+  onThought: (thought: string) => void;
   onConversation: (conversationId: string) => void;
   onTask: (taskId: string) => void;
 };
@@ -23,6 +25,10 @@ type SendMessageInput = {
 type DifyStreamEvent = {
   event?: string;
   answer?: string;
+  thought?: string;
+  observation?: string;
+  tool?: string;
+  tool_input?: string;
   conversation_id?: string;
   task_id?: string;
   message?: string;
@@ -34,6 +40,7 @@ export async function sendChatMessage({
   userId,
   signal,
   onMessage,
+  onThought,
   onConversation,
   onTask,
 }: SendMessageInput) {
@@ -57,6 +64,12 @@ export async function sendChatMessage({
     if (event.conversation_id) onConversation(event.conversation_id);
     if (event.task_id) onTask(event.task_id);
     if (event.event === 'message' && event.answer) onMessage(event.answer);
+    if (event.event === 'agent_thought') {
+      const thought = [event.thought, event.observation, event.tool ? `工具：${event.tool}` : '', event.tool_input]
+        .filter(Boolean)
+        .join('\n');
+      if (thought) onThought(thought);
+    }
     if (event.event === 'error') throw new Error(event.message || '智能问答暂时无法连接，请稍后重试。');
     if (event.event === 'message_end') complete = true;
   };

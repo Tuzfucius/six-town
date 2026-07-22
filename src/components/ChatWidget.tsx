@@ -1,5 +1,5 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { MessageCircle, Plus, Save, Send, Settings, Sparkles, Square, X } from 'lucide-react';
+import { ChevronDown, MessageCircle, Plus, Save, Send, Settings, Sparkles, Square, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { getChatConfig, saveChatConfig, type ChatConfigStatus, type ChatMessage, sendChatMessage, stopChatMessage } from '../services/difyChat';
@@ -15,6 +15,45 @@ const prompts = [
   '有什么支持特色小镇发展的政策？',
   '六镇之间有哪些产业协同方向？',
 ];
+
+const chatButtonClass = 'transition-[transform,color,background-color,border-color,box-shadow] duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200';
+
+function ThoughtPanel({ thought, isStreaming, reduceMotion }: { thought: string; isStreaming: boolean; reduceMotion: boolean | null }) {
+  const [isExpanded, setIsExpanded] = useState(isStreaming);
+
+  return (
+    <div className="mb-2 max-w-[85%] overflow-hidden rounded-lg border border-cyan-100/15 bg-cyan-200/[0.04]">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+        aria-expanded={isExpanded}
+        className={`flex min-h-9 w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs text-cyan-50/70 hover:bg-cyan-200/[0.08] ${chatButtonClass}`}
+      >
+        <span className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-cyan-200/75" aria-hidden="true" />
+          {isStreaming ? '正在思考' : '思考过程'}
+        </span>
+        <motion.span animate={reduceMotion ? undefined : { rotate: isExpanded ? 180 : 0 }} transition={{ duration: reduceMotion ? 0 : 0.18 }}>
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
+          >
+            <div className="border-t border-cyan-100/10 px-3 py-2.5 text-xs leading-5 text-white/55">
+              <p className="whitespace-pre-wrap break-words">{thought}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function createId(prefix: string) {
   const randomPart = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -149,6 +188,11 @@ export default function ChatWidget() {
             ? { ...message, content: `${message.content}${answer}` }
             : message));
         },
+        onThought: (thought) => {
+          setMessages((current) => current.map((message) => message.id === assistantId
+            ? { ...message, thought: `${message.thought ?? ''}${message.thought ? '\n' : ''}${thought}` }
+            : message));
+        },
         onConversation: (conversationId) => {
           conversationIdRef.current = conversationId;
           window.localStorage.setItem(STORAGE_KEYS.conversationId, conversationId);
@@ -241,11 +285,14 @@ export default function ChatWidget() {
               </div>
             )}
             {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <p className={`max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm leading-6 backdrop-blur-md ${message.role === 'user' ? 'border border-cyan-100/45 bg-cyan-200/80 text-[#07111c]' : 'border border-white/10 bg-[#0b111c]/60 text-white/85'}`}>
+              <motion.div key={message.id} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-[85%]">
+                  {message.role === 'assistant' && message.thought && <ThoughtPanel thought={message.thought} isStreaming={isStreaming && !message.content} reduceMotion={reduceMotion} />}
+                  <p className={`whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm leading-6 backdrop-blur-md ${message.role === 'user' ? 'border border-cyan-100/45 bg-cyan-200/80 text-[#07111c]' : 'border border-white/10 bg-[#0b111c]/60 text-white/85'}`}>
                   {message.content || (isStreaming ? <span className="text-white/45">正在检索资料...</span> : '未获得回复。')}
-                </p>
-              </div>
+                  </p>
+                </div>
+              </motion.div>
             ))}
             {error && <p role="alert" className="rounded-lg border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100 backdrop-blur-md">{error}</p>}
             <div ref={messageEndRef} />

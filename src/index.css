@@ -239,3 +239,12 @@ body {
 .chroma-card:hover .chroma-fade {
   opacity: 0;
 }
+
+/* Chat controls use a short press response without changing their layout. */
+.fixed.z-\[60\] button {
+  transition: transform 180ms ease, color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.fixed.z-\[60\] button:active:not(:disabled) {
+  transform: scale(0.95);
+}
