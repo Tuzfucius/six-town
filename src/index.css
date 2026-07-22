@@ -248,3 +248,107 @@ body {
 .fixed.z-\[60\] button:active:not(:disabled) {
   transform: scale(0.95);
 }
+
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content blockquote,
+.markdown-content pre,
+.markdown-content table {
+  margin: 0.65rem 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.25rem;
+}
+
+.markdown-content ul {
+  list-style: disc;
+}
+
+.markdown-content ol {
+  list-style: decimal;
+}
+
+.markdown-content li + li {
+  margin-top: 0.25rem;
+}
+
+.markdown-content strong {
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.markdown-content em {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.markdown-content a {
+  color: #a5f3fc;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-content a:hover {
+  color: #cffafe;
+}
+
+.markdown-content blockquote {
+  border-left: 2px solid rgba(165, 243, 252, 0.45);
+  color: rgba(255, 255, 255, 0.65);
+  padding-left: 0.75rem;
+}
+
+.markdown-content code {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.1rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.markdown-content pre {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.38);
+  padding: 0.75rem;
+}
+
+.markdown-content pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.markdown-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+
+.markdown-content th {
+  background: rgba(165, 243, 252, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}

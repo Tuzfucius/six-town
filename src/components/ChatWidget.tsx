@@ -2,6 +2,8 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ChevronDown, MessageCircle, Plus, Save, Send, Settings, Sparkles, Square, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { getChatConfig, saveChatConfig, type ChatConfigStatus, type ChatMessage, sendChatMessage, stopChatMessage } from '../services/difyChat';
 
 const STORAGE_KEYS = {
@@ -17,6 +19,10 @@ const prompts = [
 ];
 
 const chatButtonClass = 'transition-[transform,color,background-color,border-color,box-shadow] duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200';
+
+const markdownComponents: Components = {
+  a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
+};
 
 function ThoughtPanel({ thought, isStreaming, reduceMotion }: { thought: string; isStreaming: boolean; reduceMotion: boolean | null }) {
   const [isExpanded, setIsExpanded] = useState(isStreaming);
@@ -288,9 +294,11 @@ export default function ChatWidget() {
               <motion.div key={message.id} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[85%]">
                   {message.role === 'assistant' && message.thought && <ThoughtPanel thought={message.thought} isStreaming={isStreaming && !message.content} reduceMotion={reduceMotion} />}
-                  <p className={`whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm leading-6 backdrop-blur-md ${message.role === 'user' ? 'border border-cyan-100/45 bg-cyan-200/80 text-[#07111c]' : 'border border-white/10 bg-[#0b111c]/60 text-white/85'}`}>
-                  {message.content || (isStreaming ? <span className="text-white/45">正在检索资料...</span> : '未获得回复。')}
-                  </p>
+                  <div className={`break-words rounded-lg px-3 py-2 text-sm leading-6 backdrop-blur-md ${message.role === 'user' ? 'whitespace-pre-wrap border border-cyan-100/45 bg-cyan-200/80 text-[#07111c]' : 'border border-white/10 bg-[#0b111c]/60 text-white/85'}`}>
+                    {message.role === 'assistant' && message.content
+                      ? <div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{message.content}</ReactMarkdown></div>
+                      : message.content || (isStreaming ? <span className="text-white/45">正在检索资料...</span> : '未获得回复。')}
+                  </div>
                 </div>
               </motion.div>
             ))}
