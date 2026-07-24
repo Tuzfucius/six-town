@@ -65,7 +65,7 @@ jobs:
         run: npm run build # 运行打包命令，生成用于发布的静态网页文件
         env: # 设置构建时所需的环境变量
           BASE_PATH: /six-town/ # 设置网站的基础路径（通常是你的 GitHub 仓库名）
-          # 读取 GitHub 仓库中配置的变量 VITE_ENABLE_CHAT，如果没有配置，则默认值为 'false'
+          # GitHub Pages 是纯静态部署，不启用需要 Express 后端代理的 Dify 聊天功能
           VITE_ENABLE_CHAT: false
 
       # 步骤 7：初始化并配置 GitHub Pages 服务的环境
