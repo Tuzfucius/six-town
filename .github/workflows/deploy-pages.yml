@@ -1,0 +1,84 @@
+# 工作流（Workflow）的名称，会在 GitHub Actions 页面上显示
+name: Deploy Six Town to GitHub Pages
+
+# 触发条件：定义什么情况下会运行这个工作流
+on:
+  # 当有代码推送（push）到仓库时触发
+  push:
+    # 限制只有推送到 main 分支时才触发
+    branches:
+      - main
+
+  # 允许手动触发：你可以在 GitHub 网页界面上点击按钮手动运行这个工作流
+  workflow_dispatch:
+
+# 权限设置：配置此工作流对你仓库的访问权限
+permissions:
+  contents: read      # 允许读取仓库内容（用于拉取代码）
+  pages: write         # 允许写入 GitHub Pages（用于发布网页）
+  id-token: write      # 允许写入身份令牌（用于安全的部署验证）
+
+# 并发控制：防止多个部署任务同时运行导致冲突
+concurrency:
+  group: six-town-pages        # 将此任务分配到名为 "six-town-pages" 的分组中
+  cancel-in-progress: true     # 如果前一个任务还没跑完，又有新任务进来了，自动取消旧的任务
+
+# 任务列表：这里定义了具体要执行的任务
+jobs:
+  # 定义一个名为 deploy（部署）的任务
+  deploy:
+    # 部署环境配置
+    environment:
+      name: github-pages # 环境名称为 github-pages
+      url: ${{ steps.deployment.outputs.page_url }} # 部署成功后，GitHub 提供的网页访问链接
+
+    # 指定运行此任务的虚拟服务器环境（这里使用的是最新版的 Ubuntu 虚拟机）
+    runs-on: ubuntu-latest
+
+    # 任务中具体执行的步骤列表
+    steps:
+      # 步骤 1：从 GitHub 仓库拉取你的代码到虚拟机中
+      - name: Checkout repository
+        uses: actions/checkout@v7 # 使用官方的 checkout 插件（版本 v7）
+
+      # 步骤 2：安装和配置 Node.js 运行环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v6 # 使用官方的 setup-node 插件（版本 v6）
+        with:
+          node-version: lts/* # 使用最新的长期支持版（LTS）Node.js
+          cache: npm # 开启 npm 依赖缓存，加快后续的构建速度
+
+      # 步骤 3：安装项目的依赖包
+      - name: Install dependencies
+        run: npm ci # 运行 npm ci 命令（根据 package-lock.json 干净、快速地安装依赖）
+
+      # 步骤 4：生成画廊数据（这应该是你项目中自定义的脚本）
+      - name: Generate gallery data
+        run: npm run gallery:sync # 运行 package.json 中配置的 gallery:sync 脚本
+
+      # 步骤 5：类型检查或代码规范检查
+      - name: Type check
+        run: npm run lint # 运行项目中的代码规范检查脚本
+
+      # 步骤 6：构建（打包）网站
+      - name: Build website
+        run: npm run build # 运行打包命令，生成用于发布的静态网页文件
+        env: # 设置构建时所需的环境变量
+          BASE_PATH: /six-town/ # 设置网站的基础路径（通常是你的 GitHub 仓库名）
+          # 读取 GitHub 仓库中配置的变量 VITE_ENABLE_CHAT，如果没有配置，则默认值为 'false'
+          VITE_ENABLE_CHAT: ${{ vars.VITE_ENABLE_CHAT || 'false' }}
+
+      # 步骤 7：初始化并配置 GitHub Pages 服务的环境
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6 # 使用官方的 configure-pages 插件
+
+      # 步骤 8：将打包好的静态文件上传到 GitHub 的临时存储区（Artifact）
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5 # 使用官方的 upload-pages-artifact 插件
+        with:
+          path: ./dist # 指定需要上传的文件夹路径，打包后的文件通常在 dist 目录
+
+      # 步骤 9：将上传的静态文件正式部署发布到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment # 为这一步设置一个 ID，方便其他地方引用（如上方 environment.url 中使用的步骤输出）
+        uses: actions/deploy-pages@v5 # 使用官方的 deploy-pages 插件执行最终发布
