@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Boxes, Earth, Images, Map, Route } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { townsData } from '../data/towns';
 import { explorationRoutes } from '../data/exploration';
@@ -11,10 +11,36 @@ type ExploreMode = 'region' | 'industry';
 export default function LandingView() {
   const navigate = useNavigate();
   const [isExploring, setIsExploring] = useState(false);
+  const [isExploreTransitioning, setIsExploreTransitioning] = useState(false);
   const [exploreMode, setExploreMode] = useState<ExploreMode>('region');
+  const exploreTransitionTimer = useRef<number | null>(null);
+  const reduceMotion = Boolean(useReducedMotion());
+
+  useEffect(() => () => {
+    if (exploreTransitionTimer.current !== null) {
+      window.clearTimeout(exploreTransitionTimer.current);
+    }
+  }, []);
+
+  const beginExploreTransition = () => {
+    if (isExploring || isExploreTransitioning) return;
+    if (reduceMotion) {
+      setIsExploring(true);
+      return;
+    }
+
+    setIsExploreTransitioning(true);
+    exploreTransitionTimer.current = window.setTimeout(() => {
+      setIsExploring(true);
+      exploreTransitionTimer.current = window.setTimeout(() => {
+        setIsExploreTransitioning(false);
+        exploreTransitionTimer.current = null;
+      }, 180);
+    }, 300);
+  };
 
   return (
-    <InteractiveBackground interactive={!isExploring}>
+    <InteractiveBackground interactive>
       {/* Content Layer */}
       <div className="absolute inset-0 z-20 flex flex-col justify-between p-8 md:p-12 pointer-events-none">
         
@@ -23,7 +49,7 @@ export default function LandingView() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex justify-between items-center pointer-events-auto"
+          className="hidden"
         >
           <button
             type="button"
@@ -65,7 +91,8 @@ export default function LandingView() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsExploring(true)}
+                    onClick={beginExploreTransition}
+                    disabled={isExploreTransitioning}
                     className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden whitespace-nowrap rounded-2xl border border-white/30 bg-white/5 px-5 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD] lg:px-8"
                   >
                     <Map className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
@@ -91,7 +118,7 @@ export default function LandingView() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
                 className="mx-auto flex max-h-[76vh] w-full max-w-6xl flex-col items-center overflow-y-auto px-1 pb-4"
               >
                 <div className="mb-6 flex w-full flex-col items-start justify-between gap-4 px-4 sm:flex-row sm:items-center">
@@ -139,7 +166,7 @@ export default function LandingView() {
                           key={town.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.375, delay: 0.075 * index }}
+                          transition={{ duration: 0.25, delay: 0.05 * index }}
                           onClick={() => navigate(`/${town.id}/info`)}
                           className="chroma-card group cursor-pointer text-left backdrop-blur-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
                           style={{
@@ -251,7 +278,7 @@ export default function LandingView() {
             <div className="text-text-primary text-xs uppercase tracking-widest font-medium">
               杭州 · 湖州 · 嘉兴 · 绍兴
             </div>
-            <div className="flex gap-4 text-text-muted font-bold tracking-tighter text-xl opacity-40">
+            <div className="flex gap-4 text-white font-bold tracking-tighter text-xl">
               <span>软</span>
               <span>融</span>
               <span>算</span>
@@ -267,6 +294,14 @@ export default function LandingView() {
           </div>
         </motion.footer>
       </div>
+
+      <motion.div
+        aria-hidden="true"
+        initial={false}
+        animate={{ opacity: isExploreTransitioning ? 1 : 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
+        className="pointer-events-none fixed inset-0 z-[100] bg-black"
+      />
     </InteractiveBackground>
   );
 }
