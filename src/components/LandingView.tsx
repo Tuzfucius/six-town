@@ -40,7 +40,7 @@ export default function LandingView() {
   };
 
   return (
-    <InteractiveBackground interactive={!isExploring}>
+    <InteractiveBackground interactive>
       {/* Content Layer */}
       <div className="absolute inset-0 z-20 flex flex-col justify-between p-8 md:p-12 pointer-events-none">
         
@@ -49,7 +49,7 @@ export default function LandingView() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex justify-between items-center pointer-events-auto"
+          className="hidden"
         >
           <button
             type="button"
@@ -278,7 +278,7 @@ export default function LandingView() {
             <div className="text-text-primary text-xs uppercase tracking-widest font-medium">
               杭州 · 湖州 · 嘉兴 · 绍兴
             </div>
-            <div className="flex gap-4 text-text-muted font-bold tracking-tighter text-xl opacity-40">
+            <div className="flex gap-4 text-white font-bold tracking-tighter text-xl">
               <span>软</span>
               <span>融</span>
               <span>算</span>
