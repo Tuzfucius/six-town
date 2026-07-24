@@ -92,70 +92,66 @@ export default function GalleryRail({
     if (wheelIdleTimer.current !== null) window.clearTimeout(wheelIdleTimer.current);
   }, []);
 
-  const animatePosition = (target: number, focus = false) => {
+  const targetWheelIndex = useRef<number | null>(null);
+  const wheelAccumulator = useRef(0);
+
+  const animatePosition = (target: number, focus = false, duration = 0.35) => {
     stopPositionAnimation();
     const currentInteraction = ++interactionId.current;
     const animation = animate(position, target, {
       type: reduceMotion ? 'tween' : 'tween',
-      duration: reduceMotion ? 0 : 0.28,
+      duration: reduceMotion ? 0 : duration,
       ease: [0.16, 1, 0.3, 1],
     });
     positionAnimation.current = animation;
     void animation.then(() => {
       if (currentInteraction !== interactionId.current) return;
-      position.set(target);
       positionAnimation.current = null;
       if (focus) focusActiveCard();
     });
   };
 
-  const finishWheel = () => {
-    targetWheelPosition.current = null;
-    wheelVelocity.current = 0;
-    const target = clamp(Math.round(position.get()), 0, maxPosition);
-    spread.set(1);
-    animatePosition(target);
-  };
-
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+
     const handleNativeWheel = (event: globalThis.WheelEvent) => {
       const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
       if (!rawDelta || !images.length) return;
       event.preventDefault();
 
-      stopPositionAnimation();
       isInputActive.current = true;
-      spread.set(0);
-      const delta = clamp(rawDelta * (event.deltaMode === 1 ? 16 : 1), -180, 180);
-      const deltaPos = delta / compactSpacing;
+      spread.set(1);
 
-      if (targetWheelPosition.current === null) {
-        targetWheelPosition.current = position.get();
-      }
-      targetWheelPosition.current = clamp(targetWheelPosition.current + deltaPos, 0, maxPosition);
-
-      const currentInteraction = ++interactionId.current;
-      const animation = animate(position, targetWheelPosition.current, {
-        type: 'tween',
-        duration: reduceMotion ? 0 : 0.22,
-        ease: [0.16, 1, 0.3, 1],
-      });
-      positionAnimation.current = animation;
+      const delta = rawDelta * (event.deltaMode === 1 ? 16 : 1);
+      wheelAccumulator.current += delta;
 
       if (wheelIdleTimer.current !== null) window.clearTimeout(wheelIdleTimer.current);
+
+      if (Math.abs(wheelAccumulator.current) >= 30) {
+        const step = wheelAccumulator.current > 0 ? 1 : -1;
+        wheelAccumulator.current = 0;
+
+        const base = targetWheelIndex.current ?? activeIndex;
+        const nextIndex = clamp(base + step, 0, maxPosition);
+        targetWheelIndex.current = nextIndex;
+
+        lastReportedIndex.current = nextIndex;
+        onActiveIndexChange(nextIndex);
+        animatePosition(nextIndex, false, 0.36);
+      }
+
       wheelIdleTimer.current = window.setTimeout(() => {
         wheelIdleTimer.current = null;
-        if (currentInteraction === interactionId.current) {
-          isInputActive.current = false;
-          finishWheel();
-        }
-      }, 120);
+        targetWheelIndex.current = null;
+        wheelAccumulator.current = 0;
+        isInputActive.current = false;
+      }, 150);
     };
+
     viewport.addEventListener('wheel', handleNativeWheel, { passive: false });
     return () => viewport.removeEventListener('wheel', handleNativeWheel);
-  }, [compactSpacing, images.length, maxPosition, position, reduceMotion, spread]);
+  }, [activeIndex, images.length, maxPosition, onActiveIndexChange, position, reduceMotion, spread]);
 
   const focusActiveCard = () => {
     window.requestAnimationFrame(() => {
@@ -169,17 +165,11 @@ export default function GalleryRail({
     spread.set(1);
 
     const currentPos = position.get();
-    if (reduceMotion || (Math.abs(velocity) < 0.01 && Math.abs(currentPos - Math.round(currentPos)) < 0.01)) {
-      const targetIndex = clamp(Math.round(currentPos), 0, maxPosition);
-      position.set(targetIndex);
-      isInputActive.current = false;
-      return;
-    }
-
-    const projectedPosition = currentPos + velocity * 0.28;
+    const projectedPosition = currentPos + velocity * 0.25;
     let targetIndex = clamp(Math.round(projectedPosition), 0, maxPosition);
     const currentRounded = Math.round(currentPos);
-    if (targetIndex === currentRounded && Math.abs(velocity) > 0.35) {
+
+    if (targetIndex === currentRounded && Math.abs(velocity) > 0.2) {
       targetIndex = clamp(currentRounded + (velocity > 0 ? 1 : -1), 0, maxPosition);
     }
 
@@ -189,15 +179,14 @@ export default function GalleryRail({
 
     const animation = animate(position, targetIndex, {
       type: reduceMotion ? 'tween' : 'spring',
-      stiffness: 220,
-      damping: 26,
-      mass: 0.8,
+      stiffness: 140,
+      damping: 18,
+      mass: 0.9,
       velocity,
     });
     positionAnimation.current = animation;
     void animation.then(() => {
       if (currentInteraction !== interactionId.current) return;
-      position.set(targetIndex);
       positionAnimation.current = null;
       isInputActive.current = false;
     });
