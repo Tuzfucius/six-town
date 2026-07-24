@@ -4,7 +4,7 @@
  */
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import LandingView from "./components/LandingView";
 import TownView from "./components/TownView";
 import TownMapView from "./components/TownMapView";
@@ -12,6 +12,8 @@ import MetroOverviewView from "./components/MetroOverviewView";
 import IndustryChainView from "./components/IndustryChainView";
 import ChatWidget from "./components/ChatWidget";
 import GalleryView from "./components/GalleryView";
+
+const enableChat = import.meta.env.VITE_ENABLE_CHAT === "true";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -46,15 +48,15 @@ function AppShell() {
   return (
     <>
       <AnimatedRoutes />
-      {location.pathname !== "/gallery" && <ChatWidget />}
+      {enableChat && location.pathname !== "/gallery" && <ChatWidget />}
     </>
   );
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppShell />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
