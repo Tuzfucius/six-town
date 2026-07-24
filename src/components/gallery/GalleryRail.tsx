@@ -12,10 +12,8 @@ import GalleryCard from './GalleryCard';
 
 interface GalleryRailProps {
   images: readonly GalleryImage[];
-  mode: 'stack' | 'focus';
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
-  onFocus: () => void;
   onOpen: () => void;
 }
 
@@ -25,21 +23,22 @@ function clamp(value: number, min: number, max: number) {
 
 export default function GalleryRail({
   images,
-  mode,
   activeIndex,
   onActiveIndexChange,
-  onFocus,
   onOpen,
 }: GalleryRailProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const draggedDistance = useRef(0);
-  const isSettling = useRef(false);
+  const dragStartPosition = useRef(0);
+  const wheelTimer = useRef<number | null>(null);
+  const isInputActive = useRef(false);
+  const lastReportedIndex = useRef(activeIndex);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const reduceMotion = Boolean(useReducedMotion());
-  const railX = useMotionValue(0);
-  const compressionTarget = useMotionValue(0);
-  const compression = useSpring(compressionTarget, {
-    stiffness: reduceMotion ? 1000 : 260,
+  const position = useMotionValue(activeIndex);
+  const spreadTarget = useMotionValue(1);
+  const spread = useSpring(spreadTarget, {
+    stiffness: reduceMotion ? 1000 : 280,
     damping: reduceMotion ? 100 : 30,
   });
 
@@ -53,69 +52,132 @@ export default function GalleryRail({
 
   const cardWidth = useMemo(() => (
     viewportWidth < 640
-      ? clamp(viewportWidth * 0.56, 176, 232)
-      : clamp(viewportWidth * 0.215, 220, 310)
+      ? clamp(viewportWidth * 0.62, 184, 242)
+      : clamp(viewportWidth * 0.2, 230, 320)
   ), [viewportWidth]);
   const cardHeight = cardWidth * 1.25;
-  const restSpacing = mode === 'focus' ? cardWidth + 24 : Math.max(54, cardWidth * 0.34);
+  const compactSpacing = cardWidth * 0.56;
 
-  const selectIndex = (index: number) => {
-    if (draggedDistance.current > 6 || isSettling.current) return;
-    onActiveIndexChange(index);
-    if (mode === 'stack') onFocus();
-  };
+  useEffect(() => position.on('change', (value) => {
+    const nextIndex = clamp(Math.round(value), 0, images.length - 1);
+    if (nextIndex === lastReportedIndex.current) return;
+    lastReportedIndex.current = nextIndex;
+    onActiveIndexChange(nextIndex);
+  }), [images.length, onActiveIndexChange, position]);
 
-  const moveActiveIndex = (index: number) => {
-    onActiveIndexChange(index);
+  useEffect(() => {
+    lastReportedIndex.current = activeIndex;
+    if (!isInputActive.current && Math.round(position.get()) !== activeIndex) {
+      position.set(activeIndex);
+    }
+  }, [activeIndex, position]);
+
+  useEffect(() => {
+    const preload = (source: string) => {
+      const image = new Image();
+      image.src = source;
+    };
+    images.slice(Math.max(0, activeIndex - 10), activeIndex + 11).forEach((image) => preload(image.thumbnailSrc));
+    images.slice(Math.max(0, activeIndex - 1), activeIndex + 2).forEach((image) => preload(image.displaySrc));
+  }, [activeIndex, images]);
+
+  useEffect(() => () => {
+    if (wheelTimer.current !== null) window.clearTimeout(wheelTimer.current);
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const handleNativeWheel = (event: globalThis.WheelEvent) => {
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+      event.preventDefault();
+      isInputActive.current = true;
+      spreadTarget.set(0);
+      position.set(clamp(position.get() + delta / 125, 0, images.length - 1));
+      if (wheelTimer.current !== null) window.clearTimeout(wheelTimer.current);
+      wheelTimer.current = window.setTimeout(() => {
+        const target = clamp(Math.round(position.get()), 0, images.length - 1);
+        spreadTarget.set(1);
+        void animate(position, target, {
+          type: reduceMotion ? 'tween' : 'spring',
+          duration: reduceMotion ? 0 : undefined,
+          stiffness: 330,
+          damping: 34,
+        }).then(() => {
+          position.set(target);
+          isInputActive.current = false;
+          lastReportedIndex.current = target;
+          onActiveIndexChange(target);
+        });
+      }, 120);
+    };
+    viewport.addEventListener('wheel', handleNativeWheel, { passive: false });
+    return () => viewport.removeEventListener('wheel', handleNativeWheel);
+  }, [images.length, onActiveIndexChange, position, reduceMotion, spreadTarget]);
+
+  const focusActiveCard = () => {
     window.requestAnimationFrame(() => {
       viewportRef.current?.querySelector<HTMLButtonElement>('.gallery-card[aria-current="true"]')?.focus();
     });
   };
 
+  const settle = () => {
+    const target = clamp(Math.round(position.get()), 0, images.length - 1);
+    spreadTarget.set(1);
+    void animate(position, target, {
+      type: reduceMotion ? 'tween' : 'spring',
+      duration: reduceMotion ? 0 : undefined,
+      stiffness: 330,
+      damping: 34,
+    }).then(() => {
+      position.set(target);
+      isInputActive.current = false;
+      lastReportedIndex.current = target;
+      onActiveIndexChange(target);
+    });
+  };
+
+  const moveToIndex = (index: number, focus = false) => {
+    const target = clamp(index, 0, images.length - 1);
+    spreadTarget.set(1);
+    isInputActive.current = false;
+    lastReportedIndex.current = target;
+    onActiveIndexChange(target);
+    void animate(position, target, {
+      type: reduceMotion ? 'tween' : 'spring',
+      duration: reduceMotion ? 0 : undefined,
+      stiffness: 330,
+      damping: 34,
+    }).then(() => {
+      position.set(target);
+      if (focus) focusActiveCard();
+    });
+  };
+
   const handlePanStart = () => {
     draggedDistance.current = 0;
-    isSettling.current = false;
+    dragStartPosition.current = position.get();
+    isInputActive.current = true;
+    spreadTarget.set(0);
   };
 
   const handlePan = (_event: PointerEvent, info: PanInfo) => {
     draggedDistance.current = Math.max(draggedDistance.current, Math.abs(info.offset.x));
-    railX.set(info.offset.x);
-    if (!reduceMotion) compressionTarget.set(clamp(Math.abs(info.velocity.x) / 1800, 0, 1));
+    position.set(clamp(dragStartPosition.current - info.offset.x / compactSpacing, 0, images.length - 1));
   };
 
-  const handlePanEnd = (_event: PointerEvent, info: PanInfo) => {
-    compressionTarget.set(0);
-    if (draggedDistance.current <= 6) {
-      railX.set(0);
+  const handlePanEnd = () => {
+    settle();
+    window.setTimeout(() => {
       draggedDistance.current = 0;
-      return;
-    }
-    const projectedOffset = info.offset.x + (reduceMotion ? 0 : info.velocity.x * 0.16);
-    const maxStep = mode === 'focus' ? 5 : 9;
-    const step = clamp(Math.round(-projectedOffset / restSpacing), -maxStep, maxStep);
-    const nextIndex = clamp(activeIndex + step, 0, images.length - 1);
-    const actualStep = nextIndex - activeIndex;
-    isSettling.current = true;
-    void animate(railX, -actualStep * restSpacing, {
-      type: reduceMotion ? 'tween' : 'spring',
-      duration: reduceMotion ? 0 : undefined,
-      stiffness: 280,
-      damping: 32,
-    }).then(() => {
-      moveActiveIndex(nextIndex);
-      railX.set(0);
-      window.setTimeout(() => {
-        draggedDistance.current = 0;
-        isSettling.current = false;
-      }, 0);
-    });
+    }, reduceMotion ? 0 : 180);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    const direction = event.key === 'ArrowRight' ? 1 : -1;
-    moveActiveIndex(clamp(activeIndex + direction, 0, images.length - 1));
+    moveToIndex(activeIndex + (event.key === 'ArrowRight' ? 1 : -1), true);
   };
 
   return (
@@ -128,7 +190,7 @@ export default function GalleryRail({
     >
       <motion.div
         className="gallery-rail"
-        style={{ x: railX, height: Math.min(cardHeight * 1.36, viewportWidth < 640 ? 430 : 590) }}
+        style={{ height: Math.min(cardHeight * 1.42, viewportWidth < 640 ? 430 : 590) }}
         onPanStart={handlePanStart}
         onPan={handlePan}
         onPanEnd={handlePanEnd}
@@ -137,15 +199,15 @@ export default function GalleryRail({
           <GalleryCard
             key={image.id}
             image={image}
-            delta={index - activeIndex}
-            mode={mode}
-            compression={compression}
+            index={index}
+            activeIndex={activeIndex}
+            position={position}
+            spread={spread}
             cardWidth={cardWidth}
             cardHeight={cardHeight}
-            isActive={index === activeIndex}
             reduceMotion={reduceMotion}
-            onFocus={() => onActiveIndexChange(index)}
-            onSelect={() => selectIndex(index)}
+            onFocus={() => moveToIndex(index)}
+            onSelect={() => moveToIndex(index)}
             onOpen={onOpen}
           />
         ))}

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ArrowLeft, Layers3, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Maximize2 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { galleryImages } from '../data/gallery.generated';
@@ -7,12 +7,9 @@ import InteractiveBackground from './InteractiveBackground';
 import GalleryLightbox from './gallery/GalleryLightbox';
 import GalleryRail from './gallery/GalleryRail';
 
-type GalleryMode = 'stack' | 'focus';
-
 export default function GalleryView() {
   const navigate = useNavigate();
   const reduceMotion = Boolean(useReducedMotion());
-  const [mode, setMode] = useState<GalleryMode>('stack');
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const activeImage = galleryImages[activeIndex];
@@ -44,38 +41,23 @@ export default function GalleryView() {
           </div>
 
           <div className="flex items-center gap-2">
-            {mode === 'focus' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setMode('stack')}
-                  className="gallery-toolbar-button"
-                  aria-label="返回层叠视图"
-                  title="层叠视图"
-                >
-                  <Layers3 className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsLightboxOpen(true)}
-                  className="gallery-toolbar-button"
-                  aria-label="放大当前图片"
-                  title="放大"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(true)}
+              className="gallery-toolbar-button"
+              aria-label="放大当前图片"
+              title="放大"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
           </div>
         </header>
 
         <section className="relative flex min-h-0 flex-1 items-center" aria-labelledby="gallery-status">
           <GalleryRail
             images={galleryImages}
-            mode={mode}
             activeIndex={activeIndex}
             onActiveIndexChange={setActiveIndex}
-            onFocus={() => setMode('focus')}
             onOpen={() => setIsLightboxOpen(true)}
           />
         </section>

@@ -199,7 +199,7 @@ export const galleryImages = [
     "width": 1685,
     "height": 947,
     "date": "7.15",
-    "location": "egg孵化基地",
+    "location": "国际科技产业创投中心",
     "index": 20
   },
   {
@@ -209,7 +209,7 @@ export const galleryImages = [
     "width": 1680,
     "height": 947,
     "date": "7.15",
-    "location": "egg孵化基地",
+    "location": "国际科技产业创投中心",
     "index": 21
   },
   {
@@ -219,7 +219,7 @@ export const galleryImages = [
     "width": 1683,
     "height": 950,
     "date": "7.15",
-    "location": "egg孵化基地",
+    "location": "国际科技产业创投中心",
     "index": 22
   },
   {
@@ -229,7 +229,7 @@ export const galleryImages = [
     "width": 1686,
     "height": 951,
     "date": "7.15",
-    "location": "egg孵化基地",
+    "location": "国际科技产业创投中心",
     "index": 23
   },
   {
@@ -239,7 +239,7 @@ export const galleryImages = [
     "width": 1678,
     "height": 943,
     "date": "7.15",
-    "location": "egg孵化基地",
+    "location": "国际科技产业创投中心",
     "index": 24
   },
   {
@@ -249,7 +249,7 @@ export const galleryImages = [
     "width": 1920,
     "height": 1280,
     "date": "7.15",
-    "location": "egg孵化基地",
+    "location": "国际科技产业创投中心",
     "index": 25
   },
   {

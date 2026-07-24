@@ -53,9 +53,10 @@ function readDirectoryMetadata(relativePath: string) {
   const segments = relativePath.split('/');
   const date = segments[0] ?? '';
   const locationSegment = segments.length > 2 ? segments[segments.length - 2] : '';
+  const location = locationSegment.replace(/^\d+[_\-\s]*/, '');
   return {
     date,
-    location: locationSegment.replace(/^\d+[_\-\s]*/, ''),
+    location: location === 'egg孵化基地' ? '国际科技产业创投中心' : location,
   };
 }
 

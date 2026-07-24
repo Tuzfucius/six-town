@@ -11,12 +11,12 @@ import type { GalleryImage } from '../../types/gallery';
 
 interface GalleryCardProps {
   image: GalleryImage;
-  delta: number;
-  mode: 'stack' | 'focus';
-  compression: MotionValue<number>;
+  index: number;
+  activeIndex: number;
+  position: MotionValue<number>;
+  spread: MotionValue<number>;
   cardWidth: number;
   cardHeight: number;
-  isActive: boolean;
   reduceMotion: boolean;
   onFocus: () => void;
   onSelect: () => void;
@@ -25,54 +25,40 @@ interface GalleryCardProps {
 
 export default function GalleryCard({
   image,
-  delta,
-  mode,
-  compression,
+  index,
+  activeIndex,
+  position,
+  spread,
   cardWidth,
   cardHeight,
-  isActive,
   reduceMotion,
   onFocus,
   onSelect,
   onOpen,
 }: GalleryCardProps) {
-  const stackSpacing = Math.max(54, cardWidth * 0.34);
-  const focusSpacing = cardWidth + 24;
-  const restingX = useMotionValue(0);
-  const compressedXOffset = useMotionValue(0);
-  const restingRotateY = useMotionValue(0);
-  const compressedRotateYOffset = useMotionValue(0);
+  const isActive = index === activeIndex;
+  const width = useMotionValue(cardWidth);
 
   useEffect(() => {
-    const direction = delta === 0 ? 0 : Math.sign(delta);
-    const restingSpacing = mode === 'focus' ? focusSpacing : stackSpacing;
-    restingX.set(delta * restingSpacing - cardWidth / 2);
-    compressedXOffset.set(delta * (stackSpacing * 0.58 - restingSpacing));
-    restingRotateY.set(reduceMotion ? 0 : (mode === 'stack' ? direction * -8 : direction * -2));
-    compressedRotateYOffset.set(reduceMotion ? 0 : direction * -8);
-  }, [cardWidth, compressedRotateYOffset, compressedXOffset, delta, focusSpacing, mode, reduceMotion, restingRotateY, restingX, stackSpacing]);
+    width.set(cardWidth);
+  }, [cardWidth, width]);
 
-  const rawX = useTransform(
-    [restingX, compressedXOffset, compression],
-    ([base, offset, value]) => Number(base) + Number(offset) * Number(value),
-  );
-  const rawRotateY = useTransform(
-    [restingRotateY, compressedRotateYOffset, compression],
-    ([base, offset, value]) => Number(base) + Number(offset) * Number(value),
-  );
-  const springConfig = { stiffness: 330, damping: 34, mass: 0.72 };
-  const x = useSpring(rawX, springConfig);
-  const rotateY = useSpring(rawRotateY, springConfig);
-  const visibleDistance = mode === 'focus' ? 5 : 12;
-  const isVisible = Math.abs(delta) <= visibleDistance;
-
-  const handleClick = () => {
-    if (mode === 'focus' && isActive) {
-      onOpen();
-      return;
-    }
-    onSelect();
-  };
+  const x = useTransform([position, spread, width], ([current, expansion, currentWidth]) => {
+    const compactSpacing = Number(currentWidth) * 0.56;
+    const expandedSpacing = Number(currentWidth) * 0.92 + 28;
+    const relative = index - Number(current);
+    const spacing = compactSpacing + (expandedSpacing - compactSpacing) * Number(expansion);
+    return relative * spacing - Number(currentWidth) / 2;
+  });
+  const rotateY = useTransform([position, spread], ([current, expansion]) => {
+    if (reduceMotion) return 0;
+    const relative = index - Number(current);
+    const direction = relative === 0 ? 0 : Math.sign(relative);
+    return direction * (-9 + 6 * Number(expansion));
+  });
+  const z = useTransform(position, (current) => 80 - Math.abs(index - current) * 2);
+  const springX = useSpring(x, { stiffness: 360, damping: 36, mass: 0.7 });
+  const springRotateY = useSpring(rotateY, { stiffness: 360, damping: 36, mass: 0.7 });
 
   return (
     <motion.button
@@ -81,34 +67,35 @@ export default function GalleryCard({
       aria-current={isActive ? 'true' : undefined}
       tabIndex={isActive ? 0 : -1}
       onFocus={onFocus}
-      onClick={handleClick}
-      className={`gallery-card group ${isActive ? 'is-active' : ''} ${mode === 'focus' ? 'is-focus' : 'is-stack'}`}
+      onClick={() => {
+        if (isActive) onOpen();
+        else onSelect();
+      }}
+      className={`gallery-card group ${isActive ? 'is-active' : ''}`}
       style={{
-        x: reduceMotion ? rawX : x,
-        rotateY: reduceMotion ? 0 : rotateY,
+        x: reduceMotion ? x : springX,
+        rotateY: reduceMotion ? 0 : springRotateY,
         width: cardWidth,
         height: cardHeight,
         marginTop: -cardHeight / 2,
-        zIndex: isActive ? 1000 : 500 - Math.abs(delta),
-        z: reduceMotion ? 0 : (isActive ? 80 : -Math.abs(delta) * 4),
-        opacity: isVisible ? 1 : 0,
-        pointerEvents: isVisible ? 'auto' : 'none',
+        zIndex: z,
+        z: reduceMotion ? 0 : z,
       }}
     >
       <img
-        src={isActive && mode === 'focus' ? image.displaySrc : image.thumbnailSrc}
+        src={isActive ? image.displaySrc : image.thumbnailSrc}
         alt=""
-        width={isActive && mode === 'focus' ? image.width : 640}
-        height={isActive && mode === 'focus' ? image.height : 800}
-        loading={Math.abs(delta) <= 2 ? 'eager' : 'lazy'}
+        width={isActive ? image.width : 640}
+        height={isActive ? image.height : 800}
+        loading="lazy"
         draggable={false}
-        className={isActive && mode === 'focus' ? 'object-contain' : 'object-cover'}
+        className={isActive ? 'object-contain' : 'object-cover'}
       />
       <span className="gallery-card-shade" aria-hidden="true" />
       <span className="gallery-card-index" aria-hidden="true">
         {String(image.index).padStart(2, '0')}
       </span>
-      {isActive && mode === 'focus' && (
+      {isActive && (
         <span className="gallery-card-expand" aria-hidden="true">
           <Maximize2 className="h-4 w-4" />
         </span>
