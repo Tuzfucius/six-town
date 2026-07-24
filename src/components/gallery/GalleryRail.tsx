@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   animate,
   motion,
@@ -174,6 +174,38 @@ export default function GalleryRail({
     }, reduceMotion ? 0 : 180);
   };
 
+  const handleRailClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.detail === 0) return;
+    if (draggedDistance.current > 6) return;
+
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const candidate = Array.from(
+      viewport.querySelectorAll<HTMLButtonElement>('[data-gallery-card-index]'),
+    )
+      .map((card) => ({
+        index: Number(card.dataset.galleryCardIndex),
+        bounds: card.getBoundingClientRect(),
+      }))
+      .filter(({ bounds }) => (
+        event.clientX >= bounds.left
+        && event.clientX <= bounds.right
+        && event.clientY >= bounds.top
+        && event.clientY <= bounds.bottom
+      ))
+      .sort((first, second) => (
+        Math.abs(event.clientX - (first.bounds.left + first.bounds.right) / 2)
+        - Math.abs(event.clientX - (second.bounds.left + second.bounds.right) / 2)
+      ))[0]?.index;
+
+    if (candidate === undefined) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (candidate === activeIndex) onOpen();
+    else moveToIndex(candidate);
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
@@ -188,30 +220,32 @@ export default function GalleryRail({
       role="group"
       aria-label="实践影像轨道"
     >
-      <motion.div
-        className="gallery-rail"
-        style={{ height: Math.min(cardHeight * 1.42, viewportWidth < 640 ? 430 : 590) }}
-        onPanStart={handlePanStart}
-        onPan={handlePan}
-        onPanEnd={handlePanEnd}
-      >
-        {images.map((image, index) => (
-          <GalleryCard
-            key={image.id}
-            image={image}
-            index={index}
-            activeIndex={activeIndex}
-            position={position}
-            spread={spread}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-            reduceMotion={reduceMotion}
-            canSelect={() => draggedDistance.current <= 6}
-            onSelect={() => moveToIndex(index)}
-            onOpen={onOpen}
-          />
-        ))}
-      </motion.div>
+      <div onClickCapture={handleRailClick}>
+        <motion.div
+          className="gallery-rail"
+          style={{ height: Math.min(cardHeight * 1.42, viewportWidth < 640 ? 430 : 590) }}
+          onPanStart={handlePanStart}
+          onPan={handlePan}
+          onPanEnd={handlePanEnd}
+        >
+          {images.map((image, index) => (
+            <GalleryCard
+              key={image.id}
+              image={image}
+              index={index}
+              activeIndex={activeIndex}
+              position={position}
+              spread={spread}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+              reduceMotion={reduceMotion}
+              canSelect={() => draggedDistance.current <= 6}
+              onSelect={() => moveToIndex(index)}
+              onOpen={onOpen}
+            />
+          ))}
+        </motion.div>
+      </div>
     </div>
   );
 }

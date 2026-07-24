@@ -271,6 +271,8 @@ body {
   background: #080b12;
   box-shadow: -14px 18px 38px rgba(0, 0, 0, 0.42), inset 3px 0 rgba(255, 255, 255, 0.12);
   transform-origin: left center;
+  backface-visibility: hidden;
+  pointer-events: auto;
   transition: border-color 220ms ease, box-shadow 220ms ease;
   will-change: transform;
 }

@@ -62,6 +62,7 @@ export default function GalleryCard({
       aria-label={`查看第 ${image.index} 张实践影像`}
       aria-current={isActive ? 'true' : undefined}
       tabIndex={isActive ? 0 : -1}
+      data-gallery-card-index={index}
       onClick={() => {
         if (!canSelect()) return;
         if (isActive) onOpen();
@@ -74,7 +75,7 @@ export default function GalleryCard({
         width: cardWidth,
         height: cardHeight,
         marginTop: -cardHeight / 2,
-        zIndex: isActive ? 1000 : index,
+        zIndex: isActive ? 1000 : 100 - Math.abs(index - activeIndex),
         z: 0,
       }}
     >
