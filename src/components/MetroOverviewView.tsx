@@ -81,7 +81,9 @@ export default function MetroOverviewView() {
     if (!map) return;
     const applyGlobeAfterStyleChange = () => intro.applyGlobe(map);
     map.on('style.load', applyGlobeAfterStyleChange);
-    return () => map.off('style.load', applyGlobeAfterStyleChange);
+    return () => {
+      map.off('style.load', applyGlobeAfterStyleChange);
+    };
   }, [baseMap, intro.applyGlobe]);
 
   useEffect(() => {
@@ -119,6 +121,7 @@ export default function MetroOverviewView() {
 
   return (
     <main className="relative h-screen overflow-hidden bg-[#07111c] text-white">
+      <div className="absolute inset-0">
       <Map
         ref={mapRef}
         initialViewState={wantsIntro
@@ -127,7 +130,6 @@ export default function MetroOverviewView() {
         mapStyle={selectedStyle}
         projection={{ type: 'globe' }}
         attributionControl={false}
-        className="absolute inset-0"
         onLoad={handleMapLoad}
         onMove={() => { if (markersVisible) recalculate(); }}
         onClick={() => { if (intro.isInteractive) tour.pauseForUser(); }}
@@ -230,6 +232,7 @@ export default function MetroOverviewView() {
         {intro.isInteractive && <NavigationControl position="bottom-right" visualizePitch />}
         <AttributionControl compact position="bottom-right" />
       </Map>
+      </div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#07111c]/55 via-transparent to-[#07111c]/45" />
 
       <AnimatePresence>

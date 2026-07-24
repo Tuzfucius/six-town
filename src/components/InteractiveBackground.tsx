@@ -17,7 +17,7 @@ export default function InteractiveBackground({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!interactive) return;
+    if (!interactive || window.matchMedia('(max-width: 639px)').matches) return;
     const handlePointerMove = (event: PointerEvent) => {
       if (event.pointerType === 'touch') return;
       containerRef.current?.style.setProperty('--cursor-x', `${event.clientX}px`);

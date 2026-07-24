@@ -163,6 +163,7 @@ export default function TownMapView() {
   const mapStyle = baseMaps.find((item) => item.id === baseMap)?.style ?? baseMaps[0].style;
 
   return <main className="relative h-screen overflow-hidden bg-[#080b12] text-white">
+    <div className="absolute inset-0">
     <Map
       ref={mapRef}
       initialViewState={{ ...town.mapCenter, zoom: 14, pitch: 58, bearing: -26 }}
@@ -175,8 +176,7 @@ export default function TownMapView() {
       onRotateStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
       onPitchStart={(event) => { if (event.originalEvent) tour.pauseForUser(); }}
       onLoad={(event) => enableBuildings(event.target)}
-      onStyleLoad={(event) => enableBuildings(event.target)}
-      className="absolute inset-0"
+      onStyleData={(event) => enableBuildings(event.target)}
       attributionControl={false}
     >
       {visibleMapEnterprises.map((enterprise) => (
@@ -189,6 +189,7 @@ export default function TownMapView() {
       ))}
       <NavigationControl position="bottom-right" visualizePitch />
     </Map>
+    </div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#080b12]/55 via-transparent to-[#080b12]/45" />
 
       <header className="pointer-events-none absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-4 sm:left-6 sm:right-6 sm:top-6">

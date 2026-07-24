@@ -41,11 +41,20 @@ function AnimatedRoutes() {
   );
 }
 
+function AppShell() {
+  const location = useLocation();
+  return (
+    <>
+      <AnimatedRoutes />
+      {location.pathname !== "/gallery" && <ChatWidget />}
+    </>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <AnimatedRoutes />
-      <ChatWidget />
+      <AppShell />
     </BrowserRouter>
   );
 }

@@ -396,6 +396,11 @@ body {
 }
 
 @media (max-width: 639px) {
+  .spotlight-container {
+    --cursor-x: 50vw;
+    --cursor-y: 50vh;
+  }
+
   .gallery-viewport {
     perspective: 900px;
   }
@@ -410,6 +415,15 @@ body {
     width: 44px;
     height: 44px;
     transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card,
+  .gallery-toolbar-button,
+  .gallery-lightbox-nav,
+  .reveal-layer {
+    transition: none;
   }
 }
 

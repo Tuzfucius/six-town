@@ -65,6 +65,13 @@ export default function GalleryRail({
     if (mode === 'stack') onFocus();
   };
 
+  const moveActiveIndex = (index: number) => {
+    onActiveIndexChange(index);
+    window.requestAnimationFrame(() => {
+      viewportRef.current?.querySelector<HTMLButtonElement>('.gallery-card[aria-current="true"]')?.focus();
+    });
+  };
+
   const handlePanStart = () => {
     draggedDistance.current = 0;
     isSettling.current = false;
@@ -78,6 +85,11 @@ export default function GalleryRail({
 
   const handlePanEnd = (_event: PointerEvent, info: PanInfo) => {
     compressionTarget.set(0);
+    if (draggedDistance.current <= 6) {
+      railX.set(0);
+      draggedDistance.current = 0;
+      return;
+    }
     const projectedOffset = info.offset.x + (reduceMotion ? 0 : info.velocity.x * 0.16);
     const maxStep = mode === 'focus' ? 5 : 9;
     const step = clamp(Math.round(-projectedOffset / restSpacing), -maxStep, maxStep);
@@ -90,7 +102,7 @@ export default function GalleryRail({
       stiffness: 280,
       damping: 32,
     }).then(() => {
-      onActiveIndexChange(nextIndex);
+      moveActiveIndex(nextIndex);
       railX.set(0);
       window.setTimeout(() => {
         draggedDistance.current = 0;
@@ -103,7 +115,7 @@ export default function GalleryRail({
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     const direction = event.key === 'ArrowRight' ? 1 : -1;
-    onActiveIndexChange(clamp(activeIndex + direction, 0, images.length - 1));
+    moveActiveIndex(clamp(activeIndex + direction, 0, images.length - 1));
   };
 
   return (
@@ -111,6 +123,7 @@ export default function GalleryRail({
       ref={viewportRef}
       className="gallery-viewport"
       onKeyDown={handleKeyDown}
+      role="group"
       aria-label="实践影像轨道"
     >
       <motion.div
@@ -131,6 +144,7 @@ export default function GalleryRail({
             cardHeight={cardHeight}
             isActive={index === activeIndex}
             reduceMotion={reduceMotion}
+            onFocus={() => onActiveIndexChange(index)}
             onSelect={() => selectIndex(index)}
             onOpen={onOpen}
           />

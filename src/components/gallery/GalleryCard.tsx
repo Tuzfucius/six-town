@@ -1,6 +1,8 @@
 import { Maximize2 } from 'lucide-react';
+import { useEffect } from 'react';
 import {
   motion,
+  useMotionValue,
   useSpring,
   useTransform,
   type MotionValue,
@@ -16,6 +18,7 @@ interface GalleryCardProps {
   cardHeight: number;
   isActive: boolean;
   reduceMotion: boolean;
+  onFocus: () => void;
   onSelect: () => void;
   onOpen: () => void;
 }
@@ -29,22 +32,34 @@ export default function GalleryCard({
   cardHeight,
   isActive,
   reduceMotion,
+  onFocus,
   onSelect,
   onOpen,
 }: GalleryCardProps) {
   const stackSpacing = Math.max(54, cardWidth * 0.34);
   const focusSpacing = cardWidth + 24;
-  const rawX = useTransform(compression, (value) => {
-    const restingSpacing = mode === 'focus' ? focusSpacing : stackSpacing;
-    const compressedSpacing = stackSpacing * 0.58;
-    return delta * (restingSpacing + (compressedSpacing - restingSpacing) * value) - cardWidth / 2;
-  });
-  const rawRotateY = useTransform(compression, (value) => {
-    if (reduceMotion) return 0;
+  const restingX = useMotionValue(0);
+  const compressedXOffset = useMotionValue(0);
+  const restingRotateY = useMotionValue(0);
+  const compressedRotateYOffset = useMotionValue(0);
+
+  useEffect(() => {
     const direction = delta === 0 ? 0 : Math.sign(delta);
-    const base = mode === 'stack' ? direction * -8 : direction * -2;
-    return base + direction * -8 * value;
-  });
+    const restingSpacing = mode === 'focus' ? focusSpacing : stackSpacing;
+    restingX.set(delta * restingSpacing - cardWidth / 2);
+    compressedXOffset.set(delta * (stackSpacing * 0.58 - restingSpacing));
+    restingRotateY.set(reduceMotion ? 0 : (mode === 'stack' ? direction * -8 : direction * -2));
+    compressedRotateYOffset.set(reduceMotion ? 0 : direction * -8);
+  }, [cardWidth, compressedRotateYOffset, compressedXOffset, delta, focusSpacing, mode, reduceMotion, restingRotateY, restingX, stackSpacing]);
+
+  const rawX = useTransform(
+    [restingX, compressedXOffset, compression],
+    ([base, offset, value]) => Number(base) + Number(offset) * Number(value),
+  );
+  const rawRotateY = useTransform(
+    [restingRotateY, compressedRotateYOffset, compression],
+    ([base, offset, value]) => Number(base) + Number(offset) * Number(value),
+  );
   const springConfig = { stiffness: 330, damping: 34, mass: 0.72 };
   const x = useSpring(rawX, springConfig);
   const rotateY = useSpring(rawRotateY, springConfig);
@@ -65,6 +80,7 @@ export default function GalleryCard({
       aria-label={`查看第 ${image.index} 张实践影像`}
       aria-current={isActive ? 'true' : undefined}
       tabIndex={isActive ? 0 : -1}
+      onFocus={onFocus}
       onClick={handleClick}
       className={`gallery-card group ${isActive ? 'is-active' : ''} ${mode === 'focus' ? 'is-focus' : 'is-stack'}`}
       style={{
@@ -74,6 +90,7 @@ export default function GalleryCard({
         height: cardHeight,
         marginTop: -cardHeight / 2,
         zIndex: isActive ? 1000 : 500 - Math.abs(delta),
+        z: reduceMotion ? 0 : (isActive ? 80 : -Math.abs(delta) * 4),
         opacity: isVisible ? 1 : 0,
         pointerEvents: isVisible ? 'auto' : 'none',
       }}

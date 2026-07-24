@@ -97,7 +97,7 @@ export default function GalleryLightbox({
             width={image.width}
             height={image.height}
             draggable={false}
-            drag={reduceMotion ? false : 'x'}
+            drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.15}
             onDragEnd={handleDragEnd}
