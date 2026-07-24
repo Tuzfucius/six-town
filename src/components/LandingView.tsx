@@ -1,48 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Boxes, Earth, Map, Route } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Boxes, Earth, Images, Map, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import baseBgImg from '../assets/images/base_bg_1783729372930.jpg';
-import revealBgImg from '../assets/images/reveal_bg_1783729383684.jpg';
 import { townsData } from '../data/towns';
 import { explorationRoutes } from '../data/exploration';
+import InteractiveBackground from './InteractiveBackground';
 
 type ExploreMode = 'region' | 'industry';
 
 export default function LandingView() {
-  const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [isExploring, setIsExploring] = useState(false);
   const [exploreMode, setExploreMode] = useState<ExploreMode>('region');
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (containerRef.current && !isExploring) {
-        containerRef.current.style.setProperty('--cursor-x', `${e.clientX}px`);
-        containerRef.current.style.setProperty('--cursor-y', `${e.clientY}px`);
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [isExploring]);
-
   return (
-    <div ref={containerRef} className={`relative w-screen h-screen overflow-hidden bg-bg-primary ${!isExploring ? 'spotlight-container' : ''} before:absolute before:top-[-200px] before:left-[-100px] before:w-[600px] before:h-[600px] before:bg-[#1a1c3d] before:rounded-full before:blur-[120px] before:opacity-30 before:z-0 after:absolute after:bottom-[-150px] after:right-[-50px] after:w-[500px] after:h-[500px] after:bg-[#2d1a3d] after:rounded-full after:blur-[100px] after:opacity-20 after:z-0`}>
-      {/* Base Background Layer */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-60 transition-transform duration-[10s] ease-out scale-105"
-        style={{ backgroundImage: `url(${baseBgImg})` }}
-      />
-      
-      {/* Reveal Background Layer */}
-      <div 
-        className={`absolute inset-0 z-10 bg-cover bg-center transition-all duration-[2s] ease-out ${isExploring ? 'opacity-10 scale-100 filter blur-sm' : 'reveal-layer scale-105'}`}
-        style={{ backgroundImage: `url(${revealBgImg})` }}
-      />
-      
+    <InteractiveBackground interactive={!isExploring}>
       {/* Content Layer */}
       <div className="absolute inset-0 z-20 flex flex-col justify-between p-8 md:p-12 pointer-events-none">
         
@@ -80,11 +52,11 @@ export default function LandingView() {
                   看见<span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-500">新质生产力</span>
                 </h1>
                 
-                <div className="mt-12 mb-12 flex w-full max-w-xl flex-col items-stretch justify-center gap-3 px-4 sm:flex-row sm:items-center">
+                <div className="mt-12 mb-12 flex w-full max-w-4xl flex-col items-stretch justify-center gap-3 px-4 md:flex-row md:items-center">
                   <button
                     type="button"
                     onClick={() => navigate('/metro?intro=1')}
-                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/30 bg-white/5 px-8 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden whitespace-nowrap rounded-2xl border border-white/30 bg-white/5 px-5 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD] lg:px-8"
                   >
                     <Earth className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
                     <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">空间导览</span>
@@ -94,10 +66,20 @@ export default function LandingView() {
                   <button
                     type="button"
                     onClick={() => setIsExploring(true)}
-                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/30 bg-white/5 px-8 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD]"
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden whitespace-nowrap rounded-2xl border border-white/30 bg-white/5 px-5 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD] lg:px-8"
                   >
                     <Map className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
                     <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">浏览六镇</span>
+                    <ArrowRight className="relative z-10 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/gallery')}
+                    className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden whitespace-nowrap rounded-2xl border border-white/30 bg-white/5 px-5 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD] lg:px-8"
+                  >
+                    <Images className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
+                    <span className="relative z-10 tracking-widest transition-colors group-hover:text-[#A4F4FD]">影像画廊</span>
                     <ArrowRight className="relative z-10 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#A4F4FD]" aria-hidden="true" />
                     <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#A4F4FD]/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" aria-hidden="true" />
                   </button>
@@ -285,6 +267,6 @@ export default function LandingView() {
           </div>
         </motion.footer>
       </div>
-    </div>
+    </InteractiveBackground>
   );
 }

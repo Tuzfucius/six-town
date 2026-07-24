@@ -4,7 +4,8 @@
 
 ## 主要功能
 
-- 首页提供“空间导览”和“浏览六镇”双入口。
+- 首页提供“空间导览”“浏览六镇”和“影像画廊”三个入口。
+- 实践影像画廊支持书册层叠、速度连续形变、平铺聚焦和全屏查看。
 - 都市圈地图展示六镇空间分布、主题路线和自动导览。
 - 企业目录支持产业筛选、类型筛选、产业链位置筛选与企业比较。
 - 产业链视图按上游基础设施、中游技术与产品、下游应用组织企业。
@@ -29,6 +30,7 @@
 /                    首页与六镇探索入口
 /metro               都市圈空间总览
 /industry-chain      产业链视图
+/gallery             实践影像画廊
 /:townId/info        小镇企业目录
 /:townId/map         园区地图
 ```
@@ -57,6 +59,23 @@ npm run dev
 npm run lint
 npm run build
 ```
+
+## 画廊素材
+
+画廊默认从 `E:\桌面\pic` 扫描 JPG、JPEG 和 PNG 图片，生成部署所需的 WebP 缩略图、展示图及图片清单：
+
+```powershell
+npm run gallery:sync
+```
+
+如需使用其他源目录：
+
+```powershell
+$env:GALLERY_SOURCE_DIR = "D:\其他图片目录"
+npm run gallery:sync
+```
+
+处理后的素材位于 `public/gallery/`，构建和部署不再依赖源图片目录。
 
 ## Dify 智能问答
 
