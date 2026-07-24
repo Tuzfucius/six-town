@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion, type PanInfo } from 'motion/react';
 import type { GalleryImage } from '../../types/gallery';
+import { resolveGalleryAsset } from './galleryAssetUrl';
 
 interface GalleryLightboxProps {
   image: GalleryImage;
@@ -148,7 +149,7 @@ export default function GalleryLightbox({
           <motion.img
             key={image.id}
             custom={direction}
-            src={image.displaySrc}
+            src={resolveGalleryAsset(image.displaySrc)}
             alt={`${detail || '实践调研'}影像`}
             width={image.width}
             height={image.height}
