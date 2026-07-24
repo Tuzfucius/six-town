@@ -36,6 +36,7 @@ export default function GalleryRail({
   const isInputActive = useRef(false);
   const lastReportedIndex = useRef(activeIndex);
   const positionAnimation = useRef<{ stop: () => void } | null>(null);
+  const targetWheelPosition = useRef<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const reduceMotion = Boolean(useReducedMotion());
   const position = useMotionValue(activeIndex);
@@ -109,33 +110,11 @@ export default function GalleryRail({
   };
 
   const finishWheel = () => {
-    const velocity = wheelVelocity.current;
+    targetWheelPosition.current = null;
     wheelVelocity.current = 0;
-    const currentInteraction = ++interactionId.current;
-    if (reduceMotion || Math.abs(velocity) < 0.01) {
-      const target = clamp(Math.round(position.get()), 0, maxPosition);
-      spread.set(1);
-      animatePosition(target);
-      return;
-    }
-
-    stopPositionAnimation();
-    const animation = animate(position, position.get(), {
-      type: 'inertia',
-      velocity,
-      min: 0,
-      max: maxPosition,
-      bounce: 0,
-      timeConstant: 260,
-    });
-    positionAnimation.current = animation;
-    void animation.then(() => {
-      if (currentInteraction !== interactionId.current) return;
-      positionAnimation.current = null;
-      const target = clamp(Math.round(position.get()), 0, maxPosition);
-      spread.set(1);
-      animatePosition(target);
-    });
+    const target = clamp(Math.round(position.get()), 0, maxPosition);
+    spread.set(1);
+    animatePosition(target);
   };
 
   useEffect(() => {
@@ -150,19 +129,29 @@ export default function GalleryRail({
       isInputActive.current = true;
       spread.set(0);
       const delta = clamp(rawDelta * (event.deltaMode === 1 ? 16 : 1), -180, 180);
-      const now = performance.now();
-      const elapsed = Math.max(now - lastWheelTime.current, 8);
-      const nextPosition = clamp(position.get() + delta / compactSpacing, 0, maxPosition);
-      wheelVelocity.current = wheelVelocity.current * 0.55 + (delta / compactSpacing) / (elapsed / 1000) * 0.45;
-      lastWheelTime.current = now;
-      position.set(nextPosition);
+      const deltaPos = delta / compactSpacing;
+
+      if (targetWheelPosition.current === null) {
+        targetWheelPosition.current = position.get();
+      }
+      targetWheelPosition.current = clamp(targetWheelPosition.current + deltaPos, 0, maxPosition);
+
+      const currentInteraction = ++interactionId.current;
+      const animation = animate(position, targetWheelPosition.current, {
+        type: 'tween',
+        duration: reduceMotion ? 0 : 0.22,
+        ease: [0.16, 1, 0.3, 1],
+      });
+      positionAnimation.current = animation;
 
       if (wheelIdleTimer.current !== null) window.clearTimeout(wheelIdleTimer.current);
       wheelIdleTimer.current = window.setTimeout(() => {
         wheelIdleTimer.current = null;
-        isInputActive.current = false;
-        finishWheel();
-      }, 110);
+        if (currentInteraction === interactionId.current) {
+          isInputActive.current = false;
+          finishWheel();
+        }
+      }, 120);
     };
     viewport.addEventListener('wheel', handleNativeWheel, { passive: false });
     return () => viewport.removeEventListener('wheel', handleNativeWheel);
@@ -178,23 +167,37 @@ export default function GalleryRail({
     stopPositionAnimation();
     isInputActive.current = true;
     spread.set(1);
-    if (reduceMotion || Math.abs(velocity) < 0.01) {
+
+    const currentPos = position.get();
+    if (reduceMotion || (Math.abs(velocity) < 0.01 && Math.abs(currentPos - Math.round(currentPos)) < 0.01)) {
+      const targetIndex = clamp(Math.round(currentPos), 0, maxPosition);
+      position.set(targetIndex);
       isInputActive.current = false;
       return;
     }
 
+    const projectedPosition = currentPos + velocity * 0.28;
+    let targetIndex = clamp(Math.round(projectedPosition), 0, maxPosition);
+    const currentRounded = Math.round(currentPos);
+    if (targetIndex === currentRounded && Math.abs(velocity) > 0.35) {
+      targetIndex = clamp(currentRounded + (velocity > 0 ? 1 : -1), 0, maxPosition);
+    }
+
     const currentInteraction = ++interactionId.current;
-    const animation = animate(position, position.get(), {
-      type: 'inertia',
+    lastReportedIndex.current = targetIndex;
+    onActiveIndexChange(targetIndex);
+
+    const animation = animate(position, targetIndex, {
+      type: reduceMotion ? 'tween' : 'spring',
+      stiffness: 220,
+      damping: 26,
+      mass: 0.8,
       velocity,
-      min: 0,
-      max: maxPosition,
-      bounce: 0,
-      timeConstant: 260,
     });
     positionAnimation.current = animation;
     void animation.then(() => {
       if (currentInteraction !== interactionId.current) return;
+      position.set(targetIndex);
       positionAnimation.current = null;
       isInputActive.current = false;
     });
