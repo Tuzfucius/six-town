@@ -35,7 +35,7 @@ export default function LandingView() {
       exploreTransitionTimer.current = window.setTimeout(() => {
         setIsExploreTransitioning(false);
         exploreTransitionTimer.current = null;
-      }, 400);
+      }, 180);
     }, 300);
   };
 
@@ -118,7 +118,7 @@ export default function LandingView() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
                 className="mx-auto flex max-h-[76vh] w-full max-w-6xl flex-col items-center overflow-y-auto px-1 pb-4"
               >
                 <div className="mb-6 flex w-full flex-col items-start justify-between gap-4 px-4 sm:flex-row sm:items-center">
@@ -166,7 +166,7 @@ export default function LandingView() {
                           key={town.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.375, delay: 0.075 * index }}
+                          transition={{ duration: 0.25, delay: 0.05 * index }}
                           onClick={() => navigate(`/${town.id}/info`)}
                           className="chroma-card group cursor-pointer text-left backdrop-blur-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
                           style={{
