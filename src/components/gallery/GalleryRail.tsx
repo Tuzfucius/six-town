@@ -4,7 +4,6 @@ import {
   motion,
   useMotionValue,
   useReducedMotion,
-  useSpring,
   type PanInfo,
 } from 'motion/react';
 import type { GalleryImage } from '../../types/gallery';
@@ -30,19 +29,22 @@ export default function GalleryRail({
   const viewportRef = useRef<HTMLDivElement>(null);
   const draggedDistance = useRef(0);
   const dragStartPosition = useRef(0);
-  const wheelTimer = useRef<number | null>(null);
-  const wheelTarget = useRef(activeIndex);
+  const wheelIdleTimer = useRef<number | null>(null);
+  const wheelVelocity = useRef(0);
+  const lastWheelTime = useRef(0);
   const interactionId = useRef(0);
   const isInputActive = useRef(false);
   const lastReportedIndex = useRef(activeIndex);
+  const positionAnimation = useRef<{ stop: () => void } | null>(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const reduceMotion = Boolean(useReducedMotion());
   const position = useMotionValue(activeIndex);
-  const spreadTarget = useMotionValue(1);
-  const spread = useSpring(spreadTarget, {
-    stiffness: reduceMotion ? 1000 : 280,
-    damping: reduceMotion ? 100 : 30,
-  });
+  const spread = useMotionValue(1);
+
+  const stopPositionAnimation = () => {
+    positionAnimation.current?.stop();
+    positionAnimation.current = null;
+  };
 
   useEffect(() => {
     const element = viewportRef.current;
@@ -59,20 +61,20 @@ export default function GalleryRail({
   ), [viewportWidth]);
   const cardHeight = cardWidth * 1.25;
   const compactSpacing = cardWidth + 12;
+  const maxPosition = Math.max(images.length - 1, 0);
 
   useEffect(() => position.on('change', (value) => {
-    const nextIndex = clamp(Math.round(value), 0, images.length - 1);
+    const nextIndex = clamp(Math.round(value), 0, maxPosition);
     if (nextIndex === lastReportedIndex.current) return;
     lastReportedIndex.current = nextIndex;
     onActiveIndexChange(nextIndex);
-  }), [images.length, onActiveIndexChange, position]);
+  }), [maxPosition, onActiveIndexChange, position]);
 
   useEffect(() => {
     lastReportedIndex.current = activeIndex;
     if (!isInputActive.current && Math.round(position.get()) !== activeIndex) {
       position.set(activeIndex);
     }
-    if (!isInputActive.current) wheelTarget.current = activeIndex;
   }, [activeIndex, position]);
 
   useEffect(() => {
@@ -85,49 +87,86 @@ export default function GalleryRail({
   }, [activeIndex, images]);
 
   useEffect(() => () => {
-    if (wheelTimer.current !== null) window.clearTimeout(wheelTimer.current);
+    stopPositionAnimation();
+    if (wheelIdleTimer.current !== null) window.clearTimeout(wheelIdleTimer.current);
   }, []);
+
+  const animatePosition = (target: number, focus = false) => {
+    stopPositionAnimation();
+    const currentInteraction = ++interactionId.current;
+    const animation = animate(position, target, {
+      type: reduceMotion ? 'tween' : 'tween',
+      duration: reduceMotion ? 0 : 0.28,
+      ease: [0.16, 1, 0.3, 1],
+    });
+    positionAnimation.current = animation;
+    void animation.then(() => {
+      if (currentInteraction !== interactionId.current) return;
+      position.set(target);
+      positionAnimation.current = null;
+      if (focus) focusActiveCard();
+    });
+  };
+
+  const finishWheel = () => {
+    const velocity = wheelVelocity.current;
+    wheelVelocity.current = 0;
+    const currentInteraction = ++interactionId.current;
+    if (reduceMotion || Math.abs(velocity) < 0.01) {
+      const target = clamp(Math.round(position.get()), 0, maxPosition);
+      spread.set(1);
+      animatePosition(target);
+      return;
+    }
+
+    stopPositionAnimation();
+    const animation = animate(position, position.get(), {
+      type: 'inertia',
+      velocity,
+      min: 0,
+      max: maxPosition,
+      bounce: 0,
+      timeConstant: 260,
+    });
+    positionAnimation.current = animation;
+    void animation.then(() => {
+      if (currentInteraction !== interactionId.current) return;
+      positionAnimation.current = null;
+      const target = clamp(Math.round(position.get()), 0, maxPosition);
+      spread.set(1);
+      animatePosition(target);
+    });
+  };
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const handleNativeWheel = (event: globalThis.WheelEvent) => {
-      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      if (!delta) return;
+      const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!rawDelta || !images.length) return;
       event.preventDefault();
+
+      stopPositionAnimation();
       isInputActive.current = true;
-      spreadTarget.set(0);
-      interactionId.current += 1;
-      const currentInteraction = interactionId.current;
-      wheelTarget.current = clamp(wheelTarget.current + delta / 220, 0, images.length - 1);
-      void animate(position, wheelTarget.current, {
-        type: reduceMotion ? 'tween' : 'spring',
-        duration: reduceMotion ? 0 : undefined,
-        stiffness: 300,
-        damping: 32,
-      });
-      if (wheelTimer.current !== null) window.clearTimeout(wheelTimer.current);
-      wheelTimer.current = window.setTimeout(() => {
-        const target = clamp(Math.round(wheelTarget.current), 0, images.length - 1);
-        wheelTarget.current = target;
-        spreadTarget.set(1);
-        void animate(position, target, {
-          type: reduceMotion ? 'tween' : 'spring',
-          duration: reduceMotion ? 0 : undefined,
-          stiffness: 330,
-          damping: 34,
-        }).then(() => {
-          if (currentInteraction !== interactionId.current) return;
-          position.set(target);
-          isInputActive.current = false;
-          lastReportedIndex.current = target;
-          onActiveIndexChange(target);
-        });
-      }, 120);
+      spread.set(0);
+      const delta = clamp(rawDelta * (event.deltaMode === 1 ? 16 : 1), -180, 180);
+      const now = performance.now();
+      const elapsed = Math.max(now - lastWheelTime.current, 8);
+      const nextPosition = clamp(position.get() + delta / compactSpacing, 0, maxPosition);
+      wheelVelocity.current = wheelVelocity.current * 0.55 + (delta / compactSpacing) / (elapsed / 1000) * 0.45;
+      lastWheelTime.current = now;
+      position.set(nextPosition);
+
+      if (wheelIdleTimer.current !== null) window.clearTimeout(wheelIdleTimer.current);
+      wheelIdleTimer.current = window.setTimeout(() => {
+        wheelIdleTimer.current = null;
+        isInputActive.current = false;
+        finishWheel();
+      }, 110);
     };
     viewport.addEventListener('wheel', handleNativeWheel, { passive: false });
     return () => viewport.removeEventListener('wheel', handleNativeWheel);
-  }, [images.length, onActiveIndexChange, position, reduceMotion, spreadTarget]);
+  }, [compactSpacing, images.length, maxPosition, position, reduceMotion, spread]);
 
   const focusActiveCard = () => {
     window.requestAnimationFrame(() => {
@@ -135,86 +174,71 @@ export default function GalleryRail({
     });
   };
 
-  const settle = (velocity = 0) => {
-    const projectedPosition = position.get() - velocity / compactSpacing * 0.35;
-    const target = clamp(Math.round(projectedPosition), 0, images.length - 1);
-    interactionId.current += 1;
-    const currentInteraction = interactionId.current;
-    spreadTarget.set(1);
-    void animate(position, target, {
-      type: reduceMotion ? 'tween' : 'spring',
-      duration: reduceMotion ? 0 : undefined,
-      stiffness: 330,
-      damping: 34,
-      velocity: reduceMotion ? 0 : -velocity / compactSpacing,
-    }).then(() => {
-      if (currentInteraction !== interactionId.current) return;
-      position.set(target);
+  const settleDrag = (velocity = 0) => {
+    stopPositionAnimation();
+    isInputActive.current = true;
+    spread.set(1);
+    if (reduceMotion || Math.abs(velocity) < 0.01) {
       isInputActive.current = false;
-      lastReportedIndex.current = target;
-      onActiveIndexChange(target);
+      return;
+    }
+
+    const currentInteraction = ++interactionId.current;
+    const animation = animate(position, position.get(), {
+      type: 'inertia',
+      velocity,
+      min: 0,
+      max: maxPosition,
+      bounce: 0,
+      timeConstant: 260,
+    });
+    positionAnimation.current = animation;
+    void animation.then(() => {
+      if (currentInteraction !== interactionId.current) return;
+      positionAnimation.current = null;
+      isInputActive.current = false;
     });
   };
 
   const moveToIndex = (index: number, focus = false) => {
-    const target = clamp(index, 0, images.length - 1);
-    interactionId.current += 1;
-    const currentInteraction = interactionId.current;
-    wheelTarget.current = target;
-    spreadTarget.set(1);
+    const target = clamp(index, 0, maxPosition);
     isInputActive.current = false;
     lastReportedIndex.current = target;
     onActiveIndexChange(target);
-    void animate(position, target, {
-      type: reduceMotion ? 'tween' : 'spring',
-      duration: reduceMotion ? 0 : undefined,
-      stiffness: 330,
-      damping: 34,
-    }).then(() => {
-      if (currentInteraction !== interactionId.current) return;
-      position.set(target);
-      if (focus) focusActiveCard();
-    });
+    spread.set(1);
+    animatePosition(target, focus);
   };
 
   const handlePanStart = () => {
+    stopPositionAnimation();
     interactionId.current += 1;
     draggedDistance.current = 0;
     dragStartPosition.current = position.get();
     isInputActive.current = true;
-    spreadTarget.set(0);
+    spread.set(0);
   };
 
   const handlePan = (_event: PointerEvent, info: PanInfo) => {
     draggedDistance.current = Math.max(draggedDistance.current, Math.abs(info.offset.x));
-    position.set(clamp(dragStartPosition.current - info.offset.x / compactSpacing, 0, images.length - 1));
+    position.set(clamp(dragStartPosition.current - info.offset.x / compactSpacing, 0, maxPosition));
   };
 
   const handlePanEnd = (_event: PointerEvent, info: PanInfo) => {
-    settle(info.velocity.x);
+    settleDrag(-info.velocity.x / compactSpacing);
     window.setTimeout(() => {
       draggedDistance.current = 0;
     }, reduceMotion ? 0 : 180);
   };
 
   const handleRailClick = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (event.detail === 0) return;
-    if (draggedDistance.current > 6) return;
-
+    if (event.detail === 0 || draggedDistance.current > 6) return;
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const candidate = Array.from(
-      viewport.querySelectorAll<HTMLButtonElement>('[data-gallery-card-index]'),
-    )
-      .map((card) => ({
-        index: Number(card.dataset.galleryCardIndex),
-        bounds: card.getBoundingClientRect(),
-      }))
+    const candidate = Array.from(viewport.querySelectorAll<HTMLButtonElement>('[data-gallery-card-index]'))
+      .map((card) => ({ index: Number(card.dataset.galleryCardIndex), bounds: card.getBoundingClientRect() }))
       .filter(({ bounds }) => (
-        event.clientX >= bounds.left
-        && event.clientX <= bounds.right
-        && event.clientY >= bounds.top
-        && event.clientY <= bounds.bottom
+        event.clientX >= bounds.left && event.clientX <= bounds.right
+        && event.clientY >= bounds.top && event.clientY <= bounds.bottom
       ))
       .sort((first, second) => (
         Math.abs(event.clientX - (first.bounds.left + first.bounds.right) / 2)
@@ -222,7 +246,6 @@ export default function GalleryRail({
       ))[0]?.index;
 
     if (candidate === undefined) return;
-
     event.preventDefault();
     event.stopPropagation();
     if (candidate === activeIndex) onOpen();
