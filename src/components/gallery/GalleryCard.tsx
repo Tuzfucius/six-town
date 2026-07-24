@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import {
   motion,
   useMotionValue,
-  useSpring,
   useTransform,
   type MotionValue,
 } from 'motion/react';
@@ -18,7 +17,7 @@ interface GalleryCardProps {
   cardWidth: number;
   cardHeight: number;
   reduceMotion: boolean;
-  onFocus: () => void;
+  canSelect: () => boolean;
   onSelect: () => void;
   onOpen: () => void;
 }
@@ -32,7 +31,7 @@ export default function GalleryCard({
   cardWidth,
   cardHeight,
   reduceMotion,
-  onFocus,
+  canSelect,
   onSelect,
   onOpen,
 }: GalleryCardProps) {
@@ -44,8 +43,8 @@ export default function GalleryCard({
   }, [cardWidth, width]);
 
   const x = useTransform([position, spread, width], ([current, expansion, currentWidth]) => {
-    const compactSpacing = Number(currentWidth) * 0.56;
-    const expandedSpacing = Number(currentWidth) * 0.92 + 28;
+    const compactSpacing = Number(currentWidth) + 12;
+    const expandedSpacing = Number(currentWidth) + 52;
     const relative = index - Number(current);
     const spacing = compactSpacing + (expandedSpacing - compactSpacing) * Number(expansion);
     return relative * spacing - Number(currentWidth) / 2;
@@ -54,11 +53,8 @@ export default function GalleryCard({
     if (reduceMotion) return 0;
     const relative = index - Number(current);
     const direction = relative === 0 ? 0 : Math.sign(relative);
-    return direction * (-9 + 6 * Number(expansion));
+    return direction * (-7 + 4 * Number(expansion));
   });
-  const z = useTransform(position, (current) => 80 - Math.abs(index - current) * 2);
-  const springX = useSpring(x, { stiffness: 360, damping: 36, mass: 0.7 });
-  const springRotateY = useSpring(rotateY, { stiffness: 360, damping: 36, mass: 0.7 });
 
   return (
     <motion.button
@@ -66,20 +62,20 @@ export default function GalleryCard({
       aria-label={`查看第 ${image.index} 张实践影像`}
       aria-current={isActive ? 'true' : undefined}
       tabIndex={isActive ? 0 : -1}
-      onFocus={onFocus}
       onClick={() => {
+        if (!canSelect()) return;
         if (isActive) onOpen();
         else onSelect();
       }}
       className={`gallery-card group ${isActive ? 'is-active' : ''}`}
       style={{
-        x: reduceMotion ? x : springX,
-        rotateY: reduceMotion ? 0 : springRotateY,
+        x,
+        rotateY: reduceMotion ? 0 : rotateY,
         width: cardWidth,
         height: cardHeight,
         marginTop: -cardHeight / 2,
-        zIndex: z,
-        z: reduceMotion ? 0 : z,
+        zIndex: isActive ? 1000 : index,
+        z: 0,
       }}
     >
       <img

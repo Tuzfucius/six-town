@@ -56,7 +56,7 @@ export default function GalleryRail({
       : clamp(viewportWidth * 0.2, 230, 320)
   ), [viewportWidth]);
   const cardHeight = cardWidth * 1.25;
-  const compactSpacing = cardWidth * 0.56;
+  const compactSpacing = cardWidth + 12;
 
   useEffect(() => position.on('change', (value) => {
     const nextIndex = clamp(Math.round(value), 0, images.length - 1);
@@ -206,7 +206,7 @@ export default function GalleryRail({
             cardWidth={cardWidth}
             cardHeight={cardHeight}
             reduceMotion={reduceMotion}
-            onFocus={() => moveToIndex(index)}
+            canSelect={() => draggedDistance.current <= 6}
             onSelect={() => moveToIndex(index)}
             onOpen={onOpen}
           />
