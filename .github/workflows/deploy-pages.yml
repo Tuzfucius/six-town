@@ -53,8 +53,8 @@ jobs:
         run: npm ci # 运行 npm ci 命令（根据 package-lock.json 干净、快速地安装依赖）
 
       # 步骤 4：生成画廊数据（这应该是你项目中自定义的脚本）
-      - name: Generate gallery data
-        run: npm run gallery:sync # 运行 package.json 中配置的 gallery:sync 脚本
+      # - name: Generate gallery data
+      #   run: npm run gallery:sync # 运行 package.json 中配置的 gallery:sync 脚本
 
       # 步骤 5：类型检查或代码规范检查
       - name: Type check
