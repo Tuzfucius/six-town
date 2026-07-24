@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Boxes, Earth, Images, Map, Route } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { townsData } from '../data/towns';
 import { explorationRoutes } from '../data/exploration';
@@ -11,7 +11,33 @@ type ExploreMode = 'region' | 'industry';
 export default function LandingView() {
   const navigate = useNavigate();
   const [isExploring, setIsExploring] = useState(false);
+  const [isExploreTransitioning, setIsExploreTransitioning] = useState(false);
   const [exploreMode, setExploreMode] = useState<ExploreMode>('region');
+  const exploreTransitionTimer = useRef<number | null>(null);
+  const reduceMotion = Boolean(useReducedMotion());
+
+  useEffect(() => () => {
+    if (exploreTransitionTimer.current !== null) {
+      window.clearTimeout(exploreTransitionTimer.current);
+    }
+  }, []);
+
+  const beginExploreTransition = () => {
+    if (isExploring || isExploreTransitioning) return;
+    if (reduceMotion) {
+      setIsExploring(true);
+      return;
+    }
+
+    setIsExploreTransitioning(true);
+    exploreTransitionTimer.current = window.setTimeout(() => {
+      setIsExploring(true);
+      exploreTransitionTimer.current = window.setTimeout(() => {
+        setIsExploreTransitioning(false);
+        exploreTransitionTimer.current = null;
+      }, 400);
+    }, 300);
+  };
 
   return (
     <InteractiveBackground interactive={!isExploring}>
@@ -65,7 +91,8 @@ export default function LandingView() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsExploring(true)}
+                    onClick={beginExploreTransition}
+                    disabled={isExploreTransitioning}
                     className="group relative flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden whitespace-nowrap rounded-2xl border border-white/30 bg-white/5 px-5 py-4 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-[#A4F4FD] hover:bg-[#080b12]/95 hover:shadow-[0_0_30px_rgba(164,244,253,0.2)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A4F4FD] lg:px-8"
                   >
                     <Map className="relative z-10 h-5 w-5 transition-colors group-hover:text-[#A4F4FD]" aria-hidden="true" />
@@ -267,6 +294,14 @@ export default function LandingView() {
           </div>
         </motion.footer>
       </div>
+
+      <motion.div
+        aria-hidden="true"
+        initial={false}
+        animate={{ opacity: isExploreTransitioning ? 1 : 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
+        className="pointer-events-none fixed inset-0 z-[100] bg-black"
+      />
     </InteractiveBackground>
   );
 }
