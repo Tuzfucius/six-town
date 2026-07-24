@@ -8,6 +8,7 @@ import {
 } from 'motion/react';
 import type { GalleryImage } from '../../types/gallery';
 import GalleryCard from './GalleryCard';
+import { resolveGalleryAsset } from './galleryAssetUrl';
 
 interface GalleryRailProps {
   images: readonly GalleryImage[];
@@ -83,8 +84,8 @@ export default function GalleryRail({
       const image = new Image();
       image.src = source;
     };
-    images.slice(Math.max(0, activeIndex - 10), activeIndex + 11).forEach((image) => preload(image.thumbnailSrc));
-    images.slice(Math.max(0, activeIndex - 1), activeIndex + 2).forEach((image) => preload(image.displaySrc));
+    images.slice(Math.max(0, activeIndex - 10), activeIndex + 11).forEach((image) => preload(resolveGalleryAsset(image.thumbnailSrc)));
+    images.slice(Math.max(0, activeIndex - 1), activeIndex + 2).forEach((image) => preload(resolveGalleryAsset(image.displaySrc)));
   }, [activeIndex, images]);
 
   useEffect(() => () => {

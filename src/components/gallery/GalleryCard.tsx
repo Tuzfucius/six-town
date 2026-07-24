@@ -7,6 +7,7 @@ import {
   type MotionValue,
 } from 'motion/react';
 import type { GalleryImage } from '../../types/gallery';
+import { resolveGalleryAsset } from './galleryAssetUrl';
 
 interface GalleryCardProps {
   image: GalleryImage;
@@ -55,6 +56,7 @@ export default function GalleryCard({
     const direction = relative === 0 ? 0 : Math.sign(relative);
     return direction * (-7 + 4 * Number(expansion));
   });
+  const imageSrc = resolveGalleryAsset(isActive ? image.displaySrc : image.thumbnailSrc);
 
   return (
     <motion.button
@@ -80,7 +82,7 @@ export default function GalleryCard({
       }}
     >
       <img
-        src={isActive ? image.displaySrc : image.thumbnailSrc}
+        src={imageSrc}
         alt=""
         width={isActive ? image.width : 640}
         height={isActive ? image.height : 800}
