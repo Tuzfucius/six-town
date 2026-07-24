@@ -86,7 +86,7 @@ export default function GalleryCard({
         height={isActive ? image.height : 800}
         loading="lazy"
         draggable={false}
-        className={isActive ? 'object-contain' : 'object-cover'}
+        className="object-cover"
       />
       <span className="gallery-card-shade" aria-hidden="true" />
       <span className="gallery-card-index" aria-hidden="true">
