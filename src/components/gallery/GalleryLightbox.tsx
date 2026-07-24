@@ -70,9 +70,6 @@ export default function GalleryLightbox({
   };
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       if (isWheelLocked.current) return;
@@ -81,7 +78,18 @@ export default function GalleryLightbox({
       if (!rawDelta) return;
       const delta = rawDelta * (event.deltaMode === 1 ? 16 : 1);
       wheelAccumulator.current += delta;
-      if (Math.abs(wheelAccumulator.current) < 48) return;
+
+      if (wheelLockTimer.current !== null) {
+        window.clearTimeout(wheelLockTimer.current);
+        wheelLockTimer.current = null;
+      }
+
+      if (Math.abs(wheelAccumulator.current) < 28) {
+        wheelLockTimer.current = window.setTimeout(() => {
+          wheelAccumulator.current = 0;
+        }, 100);
+        return;
+      }
 
       const shouldGoNext = wheelAccumulator.current > 0;
       wheelAccumulator.current = 0;
@@ -90,13 +98,18 @@ export default function GalleryLightbox({
       isWheelLocked.current = true;
       if (shouldGoNext) onNext();
       else onPrevious();
+
       wheelLockTimer.current = window.setTimeout(() => {
         isWheelLocked.current = false;
-      }, reduceMotion ? 0 : 260);
+        wheelAccumulator.current = 0;
+      }, reduceMotion ? 0 : 180);
     };
 
-    dialog.addEventListener('wheel', handleWheel, { passive: false });
-    return () => dialog.removeEventListener('wheel', handleWheel);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      if (wheelLockTimer.current !== null) window.clearTimeout(wheelLockTimer.current);
+    };
   }, [hasNext, hasPrevious, onNext, onPrevious, reduceMotion]);
 
   const detail = [image.date, image.location].filter(Boolean).join(' · ');
