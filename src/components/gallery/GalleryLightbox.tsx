@@ -39,18 +39,19 @@ export default function GalleryLightbox({
       if (event.key === 'Escape') onClose();
       if (event.key === 'ArrowLeft' && hasPrevious) onPrevious();
       if (event.key === 'ArrowRight' && hasNext) onNext();
-      if (event.key === 'Tab') {
-        const controls = Array.from(document.querySelectorAll<HTMLElement>('[data-lightbox-control]'))
-          .filter((element) => !element.hasAttribute('disabled'));
-        if (!controls.length) return;
-        const current = controls.indexOf(document.activeElement as HTMLElement);
-        const next = event.shiftKey
-          ? (current <= 0 ? controls.length - 1 : current - 1)
-          : (current >= controls.length - 1 ? 0 : current + 1);
-        event.preventDefault();
-        controls[next]?.focus();
-      }
+      if (event.key !== 'Tab') return;
+
+      const controls = Array.from(document.querySelectorAll<HTMLElement>('[data-lightbox-control]'))
+        .filter((element) => !element.hasAttribute('disabled'));
+      if (!controls.length) return;
+      const current = controls.indexOf(document.activeElement as HTMLElement);
+      const next = event.shiftKey
+        ? (current <= 0 ? controls.length - 1 : current - 1)
+        : (current >= controls.length - 1 ? 0 : current + 1);
+      event.preventDefault();
+      controls[next]?.focus();
     };
+
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -71,12 +72,14 @@ export default function GalleryLightbox({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       if (isWheelLocked.current) return;
 
-      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      if (!delta) return;
+      const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!rawDelta) return;
+      const delta = rawDelta * (event.deltaMode === 1 ? 16 : 1);
       wheelAccumulator.current += delta;
       if (Math.abs(wheelAccumulator.current) < 48) return;
 
@@ -91,6 +94,7 @@ export default function GalleryLightbox({
         isWheelLocked.current = false;
       }, reduceMotion ? 0 : 260);
     };
+
     dialog.addEventListener('wheel', handleWheel, { passive: false });
     return () => dialog.removeEventListener('wheel', handleWheel);
   }, [hasNext, hasPrevious, onNext, onPrevious, reduceMotion]);
