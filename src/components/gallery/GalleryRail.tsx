@@ -31,6 +31,8 @@ export default function GalleryRail({
   const draggedDistance = useRef(0);
   const dragStartPosition = useRef(0);
   const wheelTimer = useRef<number | null>(null);
+  const wheelTarget = useRef(activeIndex);
+  const interactionId = useRef(0);
   const isInputActive = useRef(false);
   const lastReportedIndex = useRef(activeIndex);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
@@ -70,6 +72,7 @@ export default function GalleryRail({
     if (!isInputActive.current && Math.round(position.get()) !== activeIndex) {
       position.set(activeIndex);
     }
+    if (!isInputActive.current) wheelTarget.current = activeIndex;
   }, [activeIndex, position]);
 
   useEffect(() => {
@@ -94,10 +97,19 @@ export default function GalleryRail({
       event.preventDefault();
       isInputActive.current = true;
       spreadTarget.set(0);
-      position.set(clamp(position.get() + delta / 125, 0, images.length - 1));
+      interactionId.current += 1;
+      const currentInteraction = interactionId.current;
+      wheelTarget.current = clamp(wheelTarget.current + delta / 220, 0, images.length - 1);
+      void animate(position, wheelTarget.current, {
+        type: reduceMotion ? 'tween' : 'spring',
+        duration: reduceMotion ? 0 : undefined,
+        stiffness: 300,
+        damping: 32,
+      });
       if (wheelTimer.current !== null) window.clearTimeout(wheelTimer.current);
       wheelTimer.current = window.setTimeout(() => {
-        const target = clamp(Math.round(position.get()), 0, images.length - 1);
+        const target = clamp(Math.round(wheelTarget.current), 0, images.length - 1);
+        wheelTarget.current = target;
         spreadTarget.set(1);
         void animate(position, target, {
           type: reduceMotion ? 'tween' : 'spring',
@@ -105,6 +117,7 @@ export default function GalleryRail({
           stiffness: 330,
           damping: 34,
         }).then(() => {
+          if (currentInteraction !== interactionId.current) return;
           position.set(target);
           isInputActive.current = false;
           lastReportedIndex.current = target;
@@ -122,15 +135,20 @@ export default function GalleryRail({
     });
   };
 
-  const settle = () => {
-    const target = clamp(Math.round(position.get()), 0, images.length - 1);
+  const settle = (velocity = 0) => {
+    const projectedPosition = position.get() - velocity / compactSpacing * 0.35;
+    const target = clamp(Math.round(projectedPosition), 0, images.length - 1);
+    interactionId.current += 1;
+    const currentInteraction = interactionId.current;
     spreadTarget.set(1);
     void animate(position, target, {
       type: reduceMotion ? 'tween' : 'spring',
       duration: reduceMotion ? 0 : undefined,
       stiffness: 330,
       damping: 34,
+      velocity: reduceMotion ? 0 : -velocity / compactSpacing,
     }).then(() => {
+      if (currentInteraction !== interactionId.current) return;
       position.set(target);
       isInputActive.current = false;
       lastReportedIndex.current = target;
@@ -140,6 +158,9 @@ export default function GalleryRail({
 
   const moveToIndex = (index: number, focus = false) => {
     const target = clamp(index, 0, images.length - 1);
+    interactionId.current += 1;
+    const currentInteraction = interactionId.current;
+    wheelTarget.current = target;
     spreadTarget.set(1);
     isInputActive.current = false;
     lastReportedIndex.current = target;
@@ -150,12 +171,14 @@ export default function GalleryRail({
       stiffness: 330,
       damping: 34,
     }).then(() => {
+      if (currentInteraction !== interactionId.current) return;
       position.set(target);
       if (focus) focusActiveCard();
     });
   };
 
   const handlePanStart = () => {
+    interactionId.current += 1;
     draggedDistance.current = 0;
     dragStartPosition.current = position.get();
     isInputActive.current = true;
@@ -167,8 +190,8 @@ export default function GalleryRail({
     position.set(clamp(dragStartPosition.current - info.offset.x / compactSpacing, 0, images.length - 1));
   };
 
-  const handlePanEnd = () => {
-    settle();
+  const handlePanEnd = (_event: PointerEvent, info: PanInfo) => {
+    settle(info.velocity.x);
     window.setTimeout(() => {
       draggedDistance.current = 0;
     }, reduceMotion ? 0 : 180);

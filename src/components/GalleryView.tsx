@@ -11,13 +11,16 @@ export default function GalleryView() {
   const navigate = useNavigate();
   const reduceMotion = Boolean(useReducedMotion());
   const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxDirection, setLightboxDirection] = useState<-1 | 1>(1);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const activeImage = galleryImages[activeIndex];
 
   const previous = useCallback(() => {
+    setLightboxDirection(-1);
     setActiveIndex((index) => Math.max(0, index - 1));
   }, []);
   const next = useCallback(() => {
+    setLightboxDirection(1);
     setActiveIndex((index) => Math.min(galleryImages.length - 1, index + 1));
   }, []);
   const closeLightbox = useCallback(() => setIsLightboxOpen(false), []);
@@ -85,6 +88,7 @@ export default function GalleryView() {
           <GalleryLightbox
             image={activeImage}
             total={galleryImages.length}
+            direction={lightboxDirection}
             hasPrevious={activeIndex > 0}
             hasNext={activeIndex < galleryImages.length - 1}
             onPrevious={previous}

@@ -6,6 +6,7 @@ import type { GalleryImage } from '../../types/gallery';
 interface GalleryLightboxProps {
   image: GalleryImage;
   total: number;
+  direction: -1 | 1;
   hasPrevious: boolean;
   hasNext: boolean;
   onPrevious: () => void;
@@ -16,14 +17,19 @@ interface GalleryLightboxProps {
 export default function GalleryLightbox({
   image,
   total,
+  direction,
   hasPrevious,
   hasNext,
   onPrevious,
   onNext,
   onClose,
 }: GalleryLightboxProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const wheelAccumulator = useRef(0);
+  const wheelLockTimer = useRef<number | null>(null);
+  const isWheelLocked = useRef(false);
   const reduceMotion = Boolean(useReducedMotion());
 
   useEffect(() => {
@@ -52,16 +58,48 @@ export default function GalleryLightbox({
     };
   }, [hasNext, hasPrevious, onClose, onNext, onPrevious]);
 
+  useEffect(() => () => {
+    if (wheelLockTimer.current !== null) window.clearTimeout(wheelLockTimer.current);
+  }, []);
+
   const handleDragEnd = (_event: PointerEvent, info: PanInfo) => {
     const intent = info.offset.x + info.velocity.x * 0.12;
     if (intent < -80 && hasNext) onNext();
     if (intent > 80 && hasPrevious) onPrevious();
   };
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (isWheelLocked.current) return;
+
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+      wheelAccumulator.current += delta;
+      if (Math.abs(wheelAccumulator.current) < 48) return;
+
+      const shouldGoNext = wheelAccumulator.current > 0;
+      wheelAccumulator.current = 0;
+      if ((shouldGoNext && !hasNext) || (!shouldGoNext && !hasPrevious)) return;
+
+      isWheelLocked.current = true;
+      if (shouldGoNext) onNext();
+      else onPrevious();
+      wheelLockTimer.current = window.setTimeout(() => {
+        isWheelLocked.current = false;
+      }, reduceMotion ? 0 : 260);
+    };
+    dialog.addEventListener('wheel', handleWheel, { passive: false });
+    return () => dialog.removeEventListener('wheel', handleWheel);
+  }, [hasNext, hasPrevious, onNext, onPrevious, reduceMotion]);
+
   const detail = [image.date, image.location].filter(Boolean).join(' · ');
 
   return (
     <motion.div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={`第 ${image.index} 张实践影像`}
@@ -89,9 +127,10 @@ export default function GalleryLightbox({
       </div>
 
       <div className="relative min-h-0">
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.img
             key={image.id}
+            custom={direction}
             src={image.displaySrc}
             alt={`${detail || '实践调研'}影像`}
             width={image.width}
@@ -101,9 +140,9 @@ export default function GalleryLightbox({
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.15}
             onDragEnd={handleDragEnd}
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 1.01 }}
+            initial={reduceMotion ? false : { opacity: 0, x: direction * 32 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, x: direction * -32 }}
             transition={{ duration: reduceMotion ? 0 : 0.24 }}
             className="h-full w-full cursor-grab select-none object-contain active:cursor-grabbing"
           />
