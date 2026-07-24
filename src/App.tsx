@@ -11,6 +11,7 @@ import TownMapView from "./components/TownMapView";
 import MetroOverviewView from "./components/MetroOverviewView";
 import IndustryChainView from "./components/IndustryChainView";
 import ChatWidget from "./components/ChatWidget";
+import GalleryView from "./components/GalleryView";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -31,6 +32,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<LandingView />} />
           <Route path="/metro" element={<MetroOverviewView />} />
           <Route path="/industry-chain" element={<IndustryChainView />} />
+          <Route path="/gallery" element={<GalleryView />} />
           <Route path="/:townId/info" element={<TownView />} />
           <Route path="/:townId/map" element={<TownMapView />} />
         </Routes>
